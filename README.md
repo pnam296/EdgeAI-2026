@@ -9,7 +9,7 @@ Hạn nộp: **18/11/2026**.
 | | |
 |---|---|
 | Điểm public tốt nhất | **96,88** (run `A45-noaug`, dự đoán bằng model float) |
-| mAP50 val detection | 0,9575 (float), 0,9645 nếu dùng TTA lật ngang (chưa nộp, chờ xác nhận thể lệ) |
+| mAP50 val detection | 0,9575 (float) |
 | Intent | accuracy 1,0 trên holdout, đã đạt tối đa |
 | Mốc (cấu hình đang giữ) | `edgeai_float.py`: 320×240, ALPHA 0.45, 184.723 tham số, 160 epoch |
 | Mục tiêu | 98 điểm, tức mAP50 detection khoảng 0,971 trên tập public |
@@ -25,6 +25,7 @@ mAP trên tập public thường thấp hơn mAP val khoảng 0,002.
 | Số tham số detector | ≤ 200.000 | 184.723 |
 | Dung lượng model | ≤ 1,5 MB | khoảng 1.090 KB (trọng số float32) |
 | Lượng tử hóa INT8 | **không bắt buộc ở vòng loại** (thông báo BTC 11/11/2026) | dùng model float |
+| TTA (chạy model nhiều lần/ảnh, vd lật ngang) | **không được dùng** | 1 lần chạy/ảnh |
 
 > Từ 11/11/2026, script mới **không** xuất TFLite hay INT8 nữa. Các run cũ trong `kaggle_runs/` và file
 > `edgeai_kaggle.py` vẫn còn phần INT8, chỉ giữ lại làm lịch sử.
@@ -94,11 +95,8 @@ chắc thay đổi nào tạo ra kết quả. Các tùy chọn chính:
 | `ALPHA`, `NECK_CH` | độ rộng backbone MobileNetV2 / cổ mạng, quyết định số tham số (≤ 200k) |
 | `EPOCHS`, `BATCH`, `LR` | lịch train (cosine theo `EPOCHS`) |
 | `PATIENCE` | > 0 thì bật dừng sớm thay cho cosine |
-| `TTA_FLIP` | `True` thì dự đoán test bằng TTA lật ngang. **Chỉ bật khi thể lệ cho phép** chạy model 2 lần mỗi ảnh |
 | `TRAIN_ON_ALL` | `True` thì gộp cả val vào train. Chỉ dùng cho **lần chạy chốt cuối**, vì khi đó mAP val mất ý nghĩa |
 | `QUICK_TEST` | `True` thì chạy 300 ảnh, 2 epoch để kiểm tra pipeline trong vài phút |
-
-Script luôn in ra mAP val khi dùng TTA để tiện so sánh, kể cả khi `TTA_FLIP = False`.
 
 ### 2a. Chạy trên Kaggle (CLI)
 
@@ -188,7 +186,7 @@ git push
 | noaug | tắt augment 15 epoch cuối | 0,952 | không giữ (nhiễu) |
 | A45 | ALPHA 0.45 + EMA/GIoU/WH_SQRT/SPLIT_BOX | float 0,956, INT8 0,941 | không giữ |
 | **A45-noaug** | **ALPHA 0.45** | **float 0,9575** | **giữ, mốc hiện tại** |
-| (thử trên máy) | TTA lật ngang trên A45-noaug | 0,9645 | chờ xác nhận thể lệ |
+| (thử trên máy) | TTA lật ngang trên A45-noaug | 0,9645 | **không dùng: thể lệ cấm TTA** |
 
 Kinh nghiệm rút ra:
 - Độ phân giải đầu vào và độ rộng backbone (ALPHA) là hai đòn bẩy lớn nhất.
@@ -197,10 +195,11 @@ Kinh nghiệm rút ra:
 
 ## Hướng tiếp theo để lên 98
 
-1. **TTA lật ngang**: +0,007 trên val, không cần train. Cần xác nhận thể lệ.
+Cần thêm khoảng +0,016 mAP val. Thể lệ cấm TTA, nên mọi cải thiện phải nằm trong model (1 lần chạy mỗi ảnh).
+
+1. **Chưng cất từ model thầy**: train YOLO11s không giới hạn tham số, dùng dự đoán của nó làm nhãn mềm. Dự kiến +0,005 đến +0,015. Đây là đòn bẩy lớn nhất.
 2. **Dùng hết ngân sách tham số**: NECK_CH 64 → 80 (khoảng 199k), dự kiến +0,001 đến +0,003.
-3. **Chưng cất từ model thầy**: train YOLO11s không giới hạn tham số, dùng dự đoán của nó làm nhãn mềm. Dự kiến +0,005 đến +0,015.
-4. **TRAIN_ON_ALL** ở lần chạy chốt cuối: +0,003 đến +0,008.
+3. **TRAIN_ON_ALL** ở lần chạy chốt cuối: +0,003 đến +0,008.
 
 ## Cần khai báo với BTC
 

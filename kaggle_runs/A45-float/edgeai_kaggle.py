@@ -43,9 +43,6 @@ EVAL_EVERY = 5
 # Dừng sớm (PATIENCE > 0): bỏ cosine, giữ LR cố định, val mAP không tăng PLATEAU epoch -> LR x0.5;
 # không tăng PATIENCE epoch (hoặc LR đã chạm sàn) -> dừng. EPOCHS khi đó chỉ là trần tối đa.
 PATIENCE = 0                  # 0 = tắt (dùng cosine theo EPOCHS như cũ)
-# TTA lật ngang khi dự đoán test (mAP val +0.007 ở A45-noaug). CHỈ bật khi thể lệ cho phép
-# chạy model 2 lần/ảnh. mAP TTA trên val luôn được in ra để so sánh.
-TTA_FLIP = False
 # Tắt augment ở N epoch cuối (kiểu close_mosaic của YOLO): cuối quá trình train model thấy ảnh
 # giống hệt ảnh test -> tinh chỉnh vị trí box. 0 = augment suốt (như mốc); = EPOCHS -> không augment gì.
 NO_AUG_LAST = 0
@@ -643,21 +640,7 @@ clean.save_weights(W_FILE)
 w_bytes = W_FILE.stat().st_size
 
 
-def predict_tta(X):
-    """Chạy ảnh gốc + ảnh lật ngang, lật kết quả về rồi lấy trung bình (heat và box)."""
-    h0, b0 = predict_float(X)
-    hf, bf = predict_float(X[:, :, ::-1])
-    hf, bf = hf[:, :, ::-1], bf[:, :, ::-1].copy()
-    b5 = bf.reshape(*bf.shape[:3], C, 4)
-    b5[..., 2] = 1.0 - b5[..., 2]          # offset dx -> 1 - dx khi lật ngang
-    return (h0 + hf) / 2, (b0 + b5.reshape(bf.shape)) / 2
-
-
-m_tta, per_tta = evaluate(predict_tta, val_s, X_val)
-print(f"mAP50 val TTA lật ngang: {m_tta:.3f} ({m_tta - m_float:+.3f}) | "
-      + " ".join(f"{classes[c]} {v:.3f}" for c, v in per_tta.items()))
-predict_final = predict_tta if TTA_FLIP else predict_float
-m_final = m_tta if TTA_FLIP else m_float
+predict_final, m_final = predict_float, m_float   # 1 lần chạy/ảnh (thể lệ KHÔNG cho phép TTA)
 
 checks = [
     (f"Đầu vào {INPUT_W}x{INPUT_H} (<= 320x240)", INPUT_W <= 320 and INPUT_H <= 240),
@@ -667,7 +650,7 @@ checks = [
 print("\n===== KIỂM TRA RÀNG BUỘC =====")
 for text, ok in checks:
     print(f"  [{'OK' if ok else 'LỖI'}] {text}")
-print(f"\nmAP50 val dùng để nộp: {m_final:.3f} ({'TTA lật ngang' if TTA_FLIP else 'float, 1 lần chạy'})")
+print(f"\nmAP50 val dùng để nộp: {m_final:.3f} (float, 1 lần chạy)")
 print(f"Ước lượng điểm detection: 0,70 x {m_final * 100:.1f} = {0.7 * m_final * 100:.1f}")
 
 # ---- Dự đoán test bằng model float ----
@@ -678,8 +661,7 @@ for k in range(0, len(test_s), 500):
     heat, box = predict_final(np.stack([preprocess(s["img"]) for s in chunk]))
     det.update({s["id"]: decode(heat[i], box[i], s["orig_size"]) for i, s in enumerate(chunk)})
 (OUT / "det_predictions.json").write_text(json.dumps(det), encoding="utf-8")
-print(f"Đã lưu det_predictions.json ({sum(map(len, det.values()))} box, model float"
-      f"{' + TTA lật ngang' if TTA_FLIP else ''})")
+print(f"Đã lưu det_predictions.json ({sum(map(len, det.values()))} box, model float)")
 
 
 # =====================================================================================
