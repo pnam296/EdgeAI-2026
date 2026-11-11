@@ -1,0 +1,367 @@
+[{"stream_name":"stdout","time":44.505592029,"data":"Dữ liệu: /kaggle/input/competitions/egde-ai-challenge-2026-lan-2-qualifiers\n"}
+,{"stream_name":"stdout","time":44.505662373,"data":"Kết quả: /kaggle/working\n"}
+,{"stream_name":"stdout","time":49.78151416,"data":"TensorFlow 2.21.0 | GPU: ['/physical_device:GPU:0', '/physical_device:GPU:1']\n"}
+,{"stream_name":"stdout","time":49.786206916,"data":"\n"}
+,{"stream_name":"stdout","time":49.786225575,"data":"===== KIỂM TRA TRƯỚC KHI TRAIN =====\n"}
+,{"stream_name":"stdout","time":49.786230942,"data":"7 lớp: ['bottle', 'cup', 'phone', 'book', 'mouse', 'box', 'toy_car']\n"}
+,{"stream_name":"stdout","time":49.874752753,"data":"Ảnh test: 4000 | sample_id DETECTION cần: 4000 | khớp: 4000\n"}
+,{"stream_name":"stdout","time":49.946560249,"data":"  00001.txt: ['1 0.559375 0.295833 0.093750 0.116667', '3 0.235937 0.793750 0.303125 0.212500', '6 0.801562 0.356250 0.078125 0.087500', '5 0.257812 0.472917 0.296875 0.379167']\n"}
+,{"stream_name":"stdout","time":49.95021109,"data":"  00002.txt: ['1 0.262500 0.712500 0.187500 0.283333', '5 0.426563 0.479167 0.278125 0.400000', '6 0.518750 0.352083 0.037500 0.037500', '0 0.814063 0.587500 0.115625 0.308333']\n"}
+,{"stream_name":"stdout","time":49.953194413,"data":"  00003.txt: ['2 0.757812 0.662500 0.203125 0.141667', '6 0.290625 0.372917 0.037500 0.037500', '1 0.207813 0.483333 0.078125 0.175000', '0 0.270313 0.495833 0.096875 0.325000']\n"}
+,{"stream_name":"stdout","time":53.45784722,"data":"Kiểm tra định dạng nhãn trên 300 ảnh, 2067 dòng:\n"}
+,{"stream_name":"stdout","time":53.457881078,"data":"  yolo            hợp lệ 2067/2067\n"}
+,{"stream_name":"stdout","time":53.457891417,"data":"  xyxy_px         hợp lệ 3/2067\n"}
+,{"stream_name":"stdout","time":53.457894094,"data":"  xyxy_norm       hợp lệ 3/2067\n"}
+,{"stream_name":"stdout","time":53.457896551,"data":"  xyxy_px_last    hợp lệ 0/2067\n"}
+,{"stream_name":"stdout","time":53.457899006,"data":"  xyxy_norm_last  hợp lệ 0/2067\n"}
+,{"stream_name":"stdout","time":53.457901478,"data":"  -\u003e định dạng còn hợp lý sau khi xét pixel/chuẩn hóa: ['yolo', 'xyxy_norm', 'xyxy_px_last']\n"}
+,{"stream_name":"stdout","time":53.457905209,"data":"=\u003e Định dạng nhãn: yolo\n"}
+,{"stream_name":"stdout","time":53.522917423,"data":"Đã vẽ box lên 6 ảnh: /kaggle/working/label_preview  (MỞ RA XEM trước khi chạy thật!)\n"}
+,{"stream_name":"stdout","time":53.598562443,"data":"\n"}
+,{"stream_name":"stdout","time":53.598598148,"data":"===== DETECTOR =====\n"}
+,{"stream_name":"stdout","time":53.59860283,"data":"Đang nạp ảnh...\n"}
+,{"stream_name":"stdout","time":116.867346381,"data":"Số box train mỗi lớp: {'bottle': 4629, 'cup': 4561, 'phone': 4570, 'book': 4190, 'mouse': 4413, 'box': 4099, 'toy_car': 4554}\n"}
+,{"stream_name":"stdout","time":116.923200761,"data":"Train 4800 | Val 1200 | Test 4000 | đầu vào 320x240 | nạp mất 63s\n"}
+,{"stream_name":"stdout","time":121.641757052,"data":"Số tham số: 184,723 (giới hạn 200,000)\n"}
+,{"stream_name":"stdout","time":349.977343916,"data":"  epoch   5: loss 1.854 | val mAP50 0.000  \u003c- tốt nhất, đã lưu | 45.7s/epoch, tối đa còn ~118 phút\n"}
+,{"stream_name":"stdout","time":548.904643289,"data":"  epoch  10: loss 1.352 | val mAP50 0.000 | 42.7s/epoch, tối đa còn ~107 phút\n"}
+,{"stream_name":"stdout","time":747.791569158,"data":"  epoch  15: loss 1.135 | val mAP50 0.403  \u003c- tốt nhất, đã lưu | 41.7s/epoch, tối đa còn ~101 phút\n"}
+,{"stream_name":"stdout","time":946.896461098,"data":"  epoch  20: loss 1.005 | val mAP50 0.536  \u003c- tốt nhất, đã lưu | 41.3s/epoch, tối đa còn ~96 phút\n"}
+,{"stream_name":"stdout","time":1145.259401347,"data":"  epoch  25: loss 0.916 | val mAP50 0.592  \u003c- tốt nhất, đã lưu | 40.9s/epoch, tối đa còn ~92 phút\n"}
+,{"stream_name":"stdout","time":1344.114212993,"data":"  epoch  30: loss 0.838 | val mAP50 0.704  \u003c- tốt nhất, đã lưu | 40.7s/epoch, tối đa còn ~88 phút\n"}
+,{"stream_name":"stdout","time":1542.400915335,"data":"  epoch  35: loss 0.801 | val mAP50 0.758  \u003c- tốt nhất, đã lưu | 40.6s/epoch, tối đa còn ~85 phút\n"}
+,{"stream_name":"stdout","time":1740.505738981,"data":"  epoch  40: loss 0.754 | val mAP50 0.856  \u003c- tốt nhất, đã lưu | 40.5s/epoch, tối đa còn ~81 phút\n"}
+,{"stream_name":"stdout","time":1938.299986187,"data":"  epoch  45: loss 0.726 | val mAP50 0.882  \u003c- tốt nhất, đã lưu | 40.4s/epoch, tối đa còn ~77 phút\n"}
+,{"stream_name":"stdout","time":2135.306321632,"data":"  epoch  50: loss 0.690 | val mAP50 0.880 | 40.3s/epoch, tối đa còn ~74 phút\n"}
+,{"stream_name":"stdout","time":2332.822986891,"data":"  epoch  55: loss 0.664 | val mAP50 0.919  \u003c- tốt nhất, đã lưu | 40.2s/epoch, tối đa còn ~70 phút\n"}
+,{"stream_name":"stdout","time":2529.517812154,"data":"  epoch  60: loss 0.643 | val mAP50 0.913 | 40.1s/epoch, tối đa còn ~67 phút\n"}
+,{"stream_name":"stdout","time":2727.562335414,"data":"  epoch  65: loss 0.632 | val mAP50 0.909 | 40.1s/epoch, tối đa còn ~63 phút\n"}
+,{"stream_name":"stdout","time":2926.384092852,"data":"  epoch  70: loss 0.613 | val mAP50 0.924  \u003c- tốt nhất, đã lưu | 40.1s/epoch, tối đa còn ~60 phút\n"}
+,{"stream_name":"stdout","time":3124.38439137,"data":"  epoch  75: loss 0.592 | val mAP50 0.934  \u003c- tốt nhất, đã lưu | 40.0s/epoch, tối đa còn ~57 phút\n"}
+,{"stream_name":"stdout","time":3322.111339075,"data":"  epoch  80: loss 0.575 | val mAP50 0.943  \u003c- tốt nhất, đã lưu | 40.0s/epoch, tối đa còn ~53 phút\n"}
+,{"stream_name":"stdout","time":3520.078328416,"data":"  epoch  85: loss 0.562 | val mAP50 0.944  \u003c- tốt nhất, đã lưu | 40.0s/epoch, tối đa còn ~50 phút\n"}
+,{"stream_name":"stdout","time":3718.200331837,"data":"  epoch  90: loss 0.555 | val mAP50 0.944  \u003c- tốt nhất, đã lưu | 40.0s/epoch, tối đa còn ~47 phút\n"}
+,{"stream_name":"stdout","time":3915.863913448,"data":"  epoch  95: loss 0.547 | val mAP50 0.949  \u003c- tốt nhất, đã lưu | 39.9s/epoch, tối đa còn ~43 phút\n"}
+,{"stream_name":"stdout","time":4113.162586003,"data":"  epoch 100: loss 0.534 | val mAP50 0.950  \u003c- tốt nhất, đã lưu | 39.9s/epoch, tối đa còn ~40 phút\n"}
+,{"stream_name":"stdout","time":4311.266198939,"data":"  epoch 105: loss 0.522 | val mAP50 0.953  \u003c- tốt nhất, đã lưu | 39.9s/epoch, tối đa còn ~37 phút\n"}
+,{"stream_name":"stdout","time":4508.413481089,"data":"  epoch 110: loss 0.513 | val mAP50 0.953 | 39.9s/epoch, tối đa còn ~33 phút\n"}
+,{"stream_name":"stdout","time":4705.758333185,"data":"  epoch 115: loss 0.504 | val mAP50 0.955  \u003c- tốt nhất, đã lưu | 39.9s/epoch, tối đa còn ~30 phút\n"}
+,{"stream_name":"stdout","time":4903.317316174,"data":"  epoch 120: loss 0.493 | val mAP50 0.955  \u003c- tốt nhất, đã lưu | 39.8s/epoch, tối đa còn ~27 phút\n"}
+,{"stream_name":"stdout","time":5100.958379225,"data":"  epoch 125: loss 0.486 | val mAP50 0.955 | 39.8s/epoch, tối đa còn ~23 phút\n"}
+,{"stream_name":"stdout","time":5298.530620094,"data":"  epoch 130: loss 0.482 | val mAP50 0.956  \u003c- tốt nhất, đã lưu | 39.8s/epoch, tối đa còn ~20 phút\n"}
+,{"stream_name":"stdout","time":5496.0618203,"data":"  epoch 135: loss 0.475 | val mAP50 0.957  \u003c- tốt nhất, đã lưu | 39.8s/epoch, tối đa còn ~17 phút\n"}
+,{"stream_name":"stdout","time":5692.929798677,"data":"  epoch 140: loss 0.469 | val mAP50 0.957 | 39.8s/epoch, tối đa còn ~13 phút\n"}
+,{"stream_name":"stdout","time":5842.027754544,"data":"  \u003e\u003e\u003e TẮT AUGMENT từ epoch 146 (còn 15 epoch cuối)\n"}
+,{"stream_name":"stdout","time":5890.415155876,"data":"  epoch 145: loss 0.351 | val mAP50 0.955 | 39.8s/epoch, tối đa còn ~10 phút\n"}
+,{"stream_name":"stdout","time":6087.242273041,"data":"  epoch 150: loss 0.307 | val mAP50 0.957 | 39.8s/epoch, tối đa còn ~7 phút\n"}
+,{"stream_name":"stdout","time":6283.67669212,"data":"  epoch 155: loss 0.284 | val mAP50 0.957 | 39.8s/epoch, tối đa còn ~3 phút\n"}
+,{"stream_name":"stdout","time":6480.402215023,"data":"  epoch 160: loss 0.266 | val mAP50 0.956 | 39.7s/epoch, tối đa còn ~0 phút\n"}
+,{"stream_name":"stdout","time":6480.405840856,"data":"Train xong sau 106.0 phút. Tốt nhất: epoch 135, val mAP50 0.957\n"}
+,{"stream_name":"stdout","time":6504.772999546,"data":"\n"}
+,{"stream_name":"stdout","time":6504.77305063,"data":"mAP50 val (float32): 0.957\n"}
+,{"stream_name":"stdout","time":6504.773055146,"data":"  lớp                       AP@0.5  AP@0.3  chẩn đoán\n"}
+,{"stream_name":"stdout","time":6504.773059262,"data":"  bottle                     0.965   0.983  \n"}
+,{"stream_name":"stdout","time":6504.773062392,"data":"  cup                        0.975   0.984  \n"}
+,{"stream_name":"stdout","time":6504.773065397,"data":"  phone                      0.949   0.969  \n"}
+,{"stream_name":"stdout","time":6504.773068399,"data":"  book                       0.954   0.964  \n"}
+,{"stream_name":"stdout","time":6504.773089649,"data":"  mouse                      0.937   0.962  \n"}
+,{"stream_name":"stdout","time":6504.773094846,"data":"  box                        0.987   0.988  \n"}
+,{"stream_name":"stdout","time":6504.773099668,"data":"  toy_car                    0.934   0.961  \n"}
+,{"stream_name":"stdout","time":6509.645696758,"data":"Saved artifact at '/tmp/tmp5fzgb1yo'. The following endpoints are available:\n"}
+,{"stream_name":"stdout","time":6509.645747934,"data":"\n"}
+,{"stream_name":"stdout","time":6509.645753655,"data":"* Endpoint 'serve'\n"}
+,{"stream_name":"stdout","time":6509.645757928,"data":"  args_0 (POSITIONAL_ONLY): TensorSpec(shape=(1, 240, 320, 3), dtype=tf.float32, name='image')\n"}
+,{"stream_name":"stdout","time":6509.645762599,"data":"Output Type:\n"}
+,{"stream_name":"stdout","time":6509.645783201,"data":"  List[TensorSpec(shape=(1, 30, 40, 7), dtype=tf.float32, name=None), TensorSpec(shape=(1, 30, 40, 28), dtype=tf.float32, name=None)]\n"}
+,{"stream_name":"stdout","time":6509.645788714,"data":"Captures:\n"}
+,{"stream_name":"stdout","time":6509.645793192,"data":"  135978740638800: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645797752,"data":"  135978723195216: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645802645,"data":"  135978723195024: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645807652,"data":"  135978723195600: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645814222,"data":"  135978723194640: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645819073,"data":"  135978723195792: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645823977,"data":"  135978723194832: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645828162,"data":"  135978723196560: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645842,"data":"  135978723196752: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645845436,"data":"  135978723194448: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645848669,"data":"  135978723195984: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645851942,"data":"  135978723195408: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645855304,"data":"  135978356523472: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645858568,"data":"  135978723196368: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645862506,"data":"  135978723196176: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645866602,"data":"  135978356523856: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645870518,"data":"  135978356523088: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645874001,"data":"  135978356524624: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645877491,"data":"  135978356523280: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645880793,"data":"  135978356523664: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645884013,"data":"  135978356524240: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645887329,"data":"  135978356525392: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645891179,"data":"  135978356525200: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645895319,"data":"  135978356525584: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645900673,"data":"  135978356524816: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645904447,"data":"  135978356527312: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645908741,"data":"  135978356528464: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645912627,"data":"  135978356528656: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645916768,"data":"  135978356527888: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64592002,"data":"  135978356527504: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645923033,"data":"  135978356529040: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645926217,"data":"  135978356529808: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645929695,"data":"  135978356529616: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64593297,"data":"  135978356530000: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645935932,"data":"  135978356527696: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645939447,"data":"  135978356529232: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645943194,"data":"  135978356530576: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645966631,"data":"  135978356530384: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645970208,"data":"  135978356529424: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645973565,"data":"  135978356530768: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645976817,"data":"  135978356531152: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645980185,"data":"  135978356531728: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645983925,"data":"  135978356531536: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645987551,"data":"  135978356530192: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645990844,"data":"  135978356531920: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645994135,"data":"  135978356532304: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.645997482,"data":"  135978356533072: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646000977,"data":"  135978356532880: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646004385,"data":"  135978356533264: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646007846,"data":"  135978356528848: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646011506,"data":"  135978356532496: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646015227,"data":"  135978356534032: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646018972,"data":"  135978356533840: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646023487,"data":"  135978356534224: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646026977,"data":"  135978356531344: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646031104,"data":"  135978356533456: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646035303,"data":"  135978356534992: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646038977,"data":"  135978356534800: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646042707,"data":"  135978356535184: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64604693,"data":"  135978356532688: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646050939,"data":"  135978356534416: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646054654,"data":"  135978356535952: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646058447,"data":"  135978356535760: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646062552,"data":"  135978356536144: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646066287,"data":"  135978356533648: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646070472,"data":"  135978356535376: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646074137,"data":"  135978356536912: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646081826,"data":"  135978356536720: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646086099,"data":"  135978356537104: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646090053,"data":"  135978356534608: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646093553,"data":"  135978356536336: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646097268,"data":"  135978356537872: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646100739,"data":"  135978356537680: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646104567,"data":"  135978356538064: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646108312,"data":"  135978356535568: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646112093,"data":"  135978356538256: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646116037,"data":"  135978356539024: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646119848,"data":"  135978356538832: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646123909,"data":"  135978356539216: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646127768,"data":"  135978356537296: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646131737,"data":"  135978356536528: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646135401,"data":"  135978357277520: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646140152,"data":"  135978357277328: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646143885,"data":"  135978356538448: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646147677,"data":"  135978357276752: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646151496,"data":"  135978357276944: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646154903,"data":"  135978357278480: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646157898,"data":"  135978357278288: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646161619,"data":"  135978357278672: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646165323,"data":"  135978357277712: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64616906,"data":"  135978357277904: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646172672,"data":"  135978357279440: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64617644,"data":"  135978357279248: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646180079,"data":"  135978357279632: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646183537,"data":"  135978357277136: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646187336,"data":"  135978357278864: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646195197,"data":"  135978357280400: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64619929,"data":"  135978357280208: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646202983,"data":"  135978357280592: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646214536,"data":"  135978357278096: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646218033,"data":"  135978357279824: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646221817,"data":"  135978357281360: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646225724,"data":"  135978357281168: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646229433,"data":"  135978357281552: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646233316,"data":"  135978357279056: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646237257,"data":"  135978357280784: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646241028,"data":"  135978357282320: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646244595,"data":"  135978357282128: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646247877,"data":"  135978357282512: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646251605,"data":"  135978357280016: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646255576,"data":"  135978357281744: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646259608,"data":"  135978357283280: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646263975,"data":"  135978357283088: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646267765,"data":"  135978357283472: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646271425,"data":"  135978357280976: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64627536,"data":"  135978357282704: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646279364,"data":"  135978357284240: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646282816,"data":"  135978357284048: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646286714,"data":"  135978357284432: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646290005,"data":"  135978357281936: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646293803,"data":"  135978357283664: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646297389,"data":"  135978357285200: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646301007,"data":"  135978357285008: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64630426,"data":"  135978357285392: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646308133,"data":"  135978357282896: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64632452,"data":"  135978357284624: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646328628,"data":"  135978357286160: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64633249,"data":"  135978357285968: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646336122,"data":"  135978357286352: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646339911,"data":"  135978357283856: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646343313,"data":"  135978357285584: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646347193,"data":"  135978357287120: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646350645,"data":"  135978357286928: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646354561,"data":"  135978357287312: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646358169,"data":"  135978357284816: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64636185,"data":"  135978357286544: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64636577,"data":"  135978357288080: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646369371,"data":"  135978357287888: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646373234,"data":"  135978357288272: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646376666,"data":"  135978357285776: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646380565,"data":"  135978357287504: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64638475,"data":"  135978357289040: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646388175,"data":"  135978357288848: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646391998,"data":"  135978357289232: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.6463959230005,"data":"  135978357286736: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646399763,"data":"  135978357288464: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646403868,"data":"  135978357290000: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646406918,"data":"  135978357289808: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64641053,"data":"  135978357290192: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64641423,"data":"  135978357287696: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646418209,"data":"  135978357289424: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646422132,"data":"  135978357290960: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646425571,"data":"  135978357290768: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646429303,"data":"  135978357291152: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646433073,"data":"  135978357288656: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646440295,"data":"  135978357290384: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646443917,"data":"  135978357291920: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646447697,"data":"  135978357291728: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646451612,"data":"  135978357292112: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646455592,"data":"  135978357289616: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646459358,"data":"  135978357291344: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646462759,"data":"  135978357292688: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646466624,"data":"  135978357292496: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646470502,"data":"  135978357291536: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646476018,"data":"  135978357292880: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646479775,"data":"  135978357292304: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646483621,"data":"  135978330980816: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646487495,"data":"  135978330981008: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646491502,"data":"  135978357290576: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646495271,"data":"  135978330980624: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646499572,"data":"  135978330981392: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64650376,"data":"  135978330982160: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646507438,"data":"  135978330981968: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646511334,"data":"  135978330982352: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646514935,"data":"  135978330980432: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646518797,"data":"  135978330981584: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646522917,"data":"  135978330983120: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646526753,"data":"  135978330982928: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646529942,"data":"  135978330983312: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646533432,"data":"  135978330981200: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646537425,"data":"  135978330982544: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64654127,"data":"  135978330984080: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646545187,"data":"  135978330983888: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646548724,"data":"  135978330984272: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646554938,"data":"  135978330981776: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646559226,"data":"  135978330983504: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64656313,"data":"  135978330985040: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646566986,"data":"  135978330984848: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646570393,"data":"  135978330985232: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646574279,"data":"  135978330982736: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646578138,"data":"  135978330984464: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646581769,"data":"  135978330986000: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646585534,"data":"  135978330985808: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646589059,"data":"  135978330986192: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646593005,"data":"  135978330983696: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64659681,"data":"  135978330985424: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646600682,"data":"  135978330986960: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646604093,"data":"  135978330986768: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646607053,"data":"  135978330987152: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646611595,"data":"  135978330984656: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646615534,"data":"  135978261678416: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646619505,"data":"  135978261679184: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646623095,"data":"  135978261678992: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646626972,"data":"  135978261679376: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646630894,"data":"  135978261678224: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646634681,"data":"  135978261678608: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646638499,"data":"  135978261680144: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646641908,"data":"  135978261679952: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646644992,"data":"  135978261680336: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646648075,"data":"  135978261677264: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646651116,"data":"  135978261679568: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646654347,"data":"  135978261681104: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646657485,"data":"  135978261680912: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646663907,"data":"  135978261681296: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646667032,"data":"  135978261678800: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646670066,"data":"  135978261680528: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.6466733,"data":"  135978261682064: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646676782,"data":"  135978261681872: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646679815,"data":"  135978261682256: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646683106,"data":"  135978261679760: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646686758,"data":"  135978261681488: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64669063,"data":"  135978261683024: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646694387,"data":"  135978261682832: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64669779,"data":"  135978261683216: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646701162,"data":"  135978261680720: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.64670512,"data":"  135978261682448: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646708283,"data":"  135978261683984: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646711988,"data":"  135978261683792: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646715766,"data":"  135978261684176: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646720383,"data":"  135978261681680: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646724031,"data":"  135978261682640: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646727875,"data":"  135978261685520: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646731631,"data":"  135978261683408: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6509.646735523,"data":"  135978261684944: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stderr","time":6511.097238897,"data":"/usr/local/lib/python3.13/dist-packages/tensorflow/lite/python/convert.py:846: UserWarning: Statistics for quantized inputs were expected, but not specified; continuing anyway.\n"}
+,{"stream_name":"stderr","time":6511.097273667,"data":"  warnings.warn(\n"}
+,{"stream_name":"stderr","time":6520.968826227,"data":"fully_quantize: 0, inference_type: 6, input_inference_type: INT8, output_inference_type: INT8\n"}
+,{"stream_name":"stderr","time":6521.130916049,"data":"/usr/local/lib/python3.13/dist-packages/tensorflow/lite/python/interpreter.py:457: UserWarning:     Warning: tf.lite.Interpreter is deprecated and is scheduled for deletion in\n"}
+,{"stream_name":"stderr","time":6521.130973949,"data":"    TF 2.20. Please use the LiteRT interpreter from the ai_edge_litert package.\n"}
+,{"stream_name":"stderr","time":6521.130981655,"data":"    See the [migration guide](https://ai.google.dev/edge/litert/migration)\n"}
+,{"stream_name":"stderr","time":6521.131003472,"data":"    for details.\n"}
+,{"stream_name":"stderr","time":6521.131019137,"data":"    \n"}
+,{"stream_name":"stderr","time":6521.131026447,"data":"  warnings.warn(_INTERPRETER_DELETION_WARNING)\n"}
+,{"stream_name":"stdout","time":6555.515183569,"data":"\n"}
+,{"stream_name":"stdout","time":6555.515235417,"data":"===== KIỂM TRA RÀNG BUỘC =====\n"}
+,{"stream_name":"stdout","time":6555.515244221,"data":"  [OK] Đầu vào 320x240 (\u003c= 320x240)\n"}
+,{"stream_name":"stdout","time":6555.515250494,"data":"  [OK] Số tham số 184,723 (\u003c= 200,000)\n"}
+,{"stream_name":"stdout","time":6555.515255965,"data":"  [OK] Dung lượng 340 KB (\u003c= 1536 KB)\n"}
+,{"stream_name":"stdout","time":6555.515260811,"data":"  [OK] Kiểu dữ liệu INT8 (vào int8, ra int8)\n"}
+,{"stream_name":"stdout","time":6555.515266141,"data":"  [OK] Op TFLite Micro: ADD, CONV_2D, DEPTHWISE_CONV_2D, LOGISTIC, RESIZE_NEAREST_NEIGHBOR\n"}
+,{"stream_name":"stdout","time":6555.515271252,"data":"\n"}
+,{"stream_name":"stdout","time":6555.515275581,"data":"mAP50 val: float32 0.957 -\u003e INT8 0.951 (mất +0.006 do lượng tử hóa)\n"}
+,{"stream_name":"stdout","time":6555.515280514,"data":"Ước lượng điểm detection: 0,70 x 95.1 = 66.6\n"}
+,{"stream_name":"stdout","time":6709.417717065,"data":"Đã lưu det_predictions.json (399883 box, từ mô hình INT8)\n"}
+,{"stream_name":"stdout","time":6709.422051511,"data":"\n"}
+,{"stream_name":"stdout","time":6709.422069375,"data":"===== INTENT =====\n"}
+,{"stream_name":"stdout","time":6731.809358382,"data":"Holdout 20% (câu gốc): accuracy 1.0000\n"}
+,{"stream_name":"stdout","time":6752.317048286,"data":"6000 câu gốc -\u003e 13053 câu train (DICT_AUGMENT = True) | phân bố {'COUNT': 2353, 'EXIST': 2353, 'LIST': 1200, 'LOCATION': 2347, 'OUT_OF_SCOPE': 4800}\n"}
+,{"stream_name":"stdout","time":6752.317229889,"data":"Tham số 18,213 | vocab 263\n"}
+,{"stream_name":"stdout","time":6753.154765206,"data":"Phân bố dự đoán test: {'LOCATION': 827, 'LIST': 800, 'COUNT': 800, 'OUT_OF_SCOPE': 800, 'EXIST': 773} (test cân bằng: mỗi nhãn 800)\n"}
+,{"stream_name":"stdout","time":6753.488567807,"data":"Saved artifact at '/tmp/tmptgcvnrv9'. The following endpoints are available:\n"}
+,{"stream_name":"stdout","time":6753.488622055,"data":"\n"}
+,{"stream_name":"stdout","time":6753.488629374,"data":"* Endpoint 'serve'\n"}
+,{"stream_name":"stdout","time":6753.488634808,"data":"  args_0 (POSITIONAL_ONLY): TensorSpec(shape=(None, 24), dtype=tf.int32, name='tokens')\n"}
+,{"stream_name":"stdout","time":6753.488639689,"data":"Output Type:\n"}
+,{"stream_name":"stdout","time":6753.488644007,"data":"  TensorSpec(shape=(None, 5), dtype=tf.float32, name=None)\n"}
+,{"stream_name":"stdout","time":6753.488648855,"data":"Captures:\n"}
+,{"stream_name":"stdout","time":6753.488653538,"data":"  135972667967824: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6753.488657827,"data":"  135972667968784: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6753.488661928,"data":"  135972667969168: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6753.488666188,"data":"  135972667968208: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6753.488670291,"data":"  135972667968976: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6753.488674378,"data":"  135972667967632: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6753.488678558,"data":"  135972667967248: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6753.488682634,"data":"  135972667965712: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stdout","time":6753.488699646,"data":"  135972667969552: TensorSpec(shape=(), dtype=tf.resource, name=None)\n"}
+,{"stream_name":"stderr","time":6753.573341646,"data":"/usr/local/lib/python3.13/dist-packages/tensorflow/lite/python/convert.py:846: UserWarning: Statistics for quantized inputs were expected, but not specified; continuing anyway.\n"}
+,{"stream_name":"stderr","time":6753.573384878,"data":"  warnings.warn(\n"}
+,{"stream_name":"stderr","time":6754.107770961,"data":"fully_quantize: 0, inference_type: 6, input_inference_type: FLOAT32, output_inference_type: INT8\n"}
+,{"stream_name":"stdout","time":6754.136474751,"data":"TFLite INT8 intent: 27.5 KB\n"}
+,{"stream_name":"stdout","time":6754.136507133,"data":"\n"}
+,{"stream_name":"stdout","time":6754.136513487,"data":"===== SUBMISSION =====\n"}
+,{"stream_name":"stdout","time":6757.577114028,"data":"Detection: 4000 ảnh (thiếu 0) | Intent: 4000 câu (thiếu 0)\n"}
+,{"stream_name":"stdout","time":6757.577167293,"data":"OK - file hợp lệ, sẵn sàng nộp: /kaggle/working/submission.csv\n"}
+,{"stream_name":"stderr","time":6765.998015944,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":6765.998071553,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":6766.292082904,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":6766.292140439,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":6767.59436663,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":6768.360273275,"data":"[NbConvertApp] Writing 519547 bytes to __results__.html\n"}
+]

@@ -1,0 +1,29 @@
+# Môi trường ảo Python (mỗi người tự tạo: python -m venv . && pip install -r requirements.txt)
+/Lib/
+/Scripts/
+/Include/
+/share/
+/etc/
+/pyvenv.cfg
+__pycache__/
+*.pyc
+
+# Dữ liệu cuộc thi - KHÔNG đưa lên GitHub (843 MB, và thể lệ thường cấm phát tán). Mỗi người tự tải:
+#   kaggle competitions download -c egde-ai-challenge-2026-lan-2-qualifiers
+/data/
+
+# Kết quả chạy / model / submission (nặng, tạo lại được)
+/outputs/
+/runs/
+*.pt
+*.keras
+*.h5
+*.tflite
+kaggle_runs/*/output/*
+!kaggle_runs/*/output/*.log
+submission*.csv
+det_predictions.json
+
+# Bí mật
+kaggle.json
+.env
