@@ -239,6 +239,9 @@ Quy ước so sánh: **TB AP@0.5 của 7 lớp trên val** (seed 42, 20%) so v�
 Chênh **< 0,003 = nhiễu**. Mỗi run khoảng 2,3 giờ GPU (T4 x2 Kaggle).
 
 **Bước 1 – run `bakd`: tự distill (born-again), thầy = s4.**
+> Trạng thái 13/11: **đang chạy trên Kaggle** (`kaggle_runs/bakd`, KD_HM 1.0, KD_BOX 0.5). Code distill online đã có trong
+> `edgeai_float.py` (`KD_HM`, `KD_BOX`, `TEACHER_WEIGHTS`; mặc định 0 = tắt). Đã chạy thử trên máy: thầy nạp đúng,
+> không bị cập nhật khi train, trò cập nhật đủ.
 Trò = đúng kiến trúc s4, train lại từ đầu 160 epoch, thầy = trọng số `tiny_det_best.weights.h5` của kernel s4
 (thêm `kernel_sources: phngnam296/edgeai-exp-s4`). Không tốn công train thầy.
 - **≥ 0,969** (+0,003 trở lên): GIỮ, `bakd` thành mốc. Sang Bước 2 nếu còn ≥ 2 ngày, không thì sang Bước 3.

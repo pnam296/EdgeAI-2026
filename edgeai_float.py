@@ -56,6 +56,14 @@ TRAIN_ON_ALL = False          # True: gộp val vào train khi đã chốt cấu
 KD_WEIGHT = 0                 # 0 = tắt distill (giống mốc)
 KD_MIN_SCORE = 0.05           # bỏ box thầy có score thấp hơn
 KD_FILE = "teacher_soft.json"
+# Distill ONLINE từ thầy tự train (train từ đầu trên dữ liệu BTC, hợp lệ ở vòng loại). Thầy đóng băng chạy song
+# song trên đúng batch đã augment của trò; trò bắt chước heatmap thô của thầy trên MỌI ô (KD_HM) và box của thầy
+# ở ô có vật (KD_BOX). Thầy chỉ dùng lúc train, không nộp. Born-again: thầy = s4 (cùng kiến trúc).
+KD_HM = 0.0                   # 0 = tắt distill online (giống mốc)
+KD_BOX = 0.0
+KD_BOX_THR = 0.5              # ô thầy là đỉnh heatmap và score >= ngưỡng này cũng được distill box
+TEACHER_WEIGHTS = "tiny_det_float.weights.h5"   # tìm trong /kaggle/input, outputs/teacher, /content/teacher
+TEACHER_ALPHA, TEACHER_NECK = 0.45, 64          # kiến trúc thầy (STRIDE4 giống trò); s4 = 0.45, 64
 # Backbone MobileNetV2 khởi tạo từ ImageNet (Keras chỉ có ALPHA 0.35 / 0.5 / 0.75 / 1.0; cần internet để tải).
 # Trọng số conv không phụ thuộc kích thước ảnh -> dựng bản 224x224 có trọng số rồi chép sang 320x240.
 PRETRAINED = False
@@ -464,10 +472,12 @@ def _sep_conv(x, ch, name):
     return _conv_bn_relu(x, ch, 1, name=f"{name}_pw")
 
 
-def build_model(num_classes):
+def build_model(num_classes, alpha=None, neck_ch=None, name="tiny_centernet"):
+    ALPHA = alpha or globals()["ALPHA"]
+    NECK_CH = neck_ch or globals()["NECK_CH"]
     base = tf.keras.applications.MobileNetV2(input_shape=(INPUT_H, INPUT_W, 3), alpha=ALPHA,
                                              include_top=False, weights=None)
-    if PRETRAINED:
+    if PRETRAINED and name == "tiny_centernet":
         assert ALPHA in (0.35, 0.5, 0.75, 1.0), f"Không có trọng số ImageNet cho ALPHA {ALPHA}"
         ref = tf.keras.applications.MobileNetV2(input_shape=(224, 224, 3), alpha=ALPHA,
                                                 include_top=False, weights="imagenet")
@@ -489,7 +499,7 @@ def build_model(num_classes):
     heat = L.Conv2D(num_classes, 1, activation="sigmoid", name="heatmap",
                     bias_initializer=tf.keras.initializers.Constant(-2.19))(x)
     box = L.Conv2D(4 * num_classes, 1, name="box")(x)
-    return tf.keras.Model(base.input, [heat, box], name="tiny_centernet")
+    return tf.keras.Model(base.input, [heat, box], name=name)
 
 
 def focal_loss(y_true, y_pred):
@@ -535,6 +545,55 @@ def make_box_loss(num_classes, off_weight=1.0):
         return (wh_weight * wh + off_weight * off) / n
 
     return box_loss
+
+
+def make_kd_heat_loss(num_classes):
+    """y_pred = [heatmap trò (C) | heatmap thầy (C)]. Focal với nhãn thật + KD_HM * |t-p|^2 * BCE(t, p)
+    trên mọi ô (trọng số |t-p|^2 làm ô nền dễ gần như không tính), chia số vật như focal."""
+    C = num_classes
+
+    def heat_loss(y_true, y_pred):
+        p, t = y_pred[..., :C], y_pred[..., C:]
+        loss = focal_loss(y_true, p)
+        pc = tf.clip_by_value(p, 1e-4, 1 - 1e-4)
+        bce = -(t * tf.math.log(pc) + (1 - t) * tf.math.log(1 - pc))
+        n_pos = tf.maximum(tf.reduce_sum(tf.cast(tf.equal(y_true, 1.0), tf.float32), axis=[1, 2, 3]), 1.0)
+        return loss + KD_HM * tf.reduce_sum(tf.square(t - p) * bce, axis=[1, 2, 3]) / n_pos
+
+    return heat_loss
+
+
+def make_kd_box_loss(num_classes):
+    """y_pred = [box trò (4C) | box thầy (4C) | heatmap thầy (C)]. L1 box như cũ + KD_BOX * L1(box trò, box thầy)
+    ở tâm vật thật và ở đỉnh heatmap thầy có score >= KD_BOX_THR (trọng số = score)."""
+    C = num_classes
+    base = make_box_loss(C)
+    wh_weight = 1.0 if WH_LOG else 0.1
+
+    def box_loss(y_true, y_pred):
+        sb, tb, th = y_pred[..., :4 * C], y_pred[..., 4 * C:8 * C], y_pred[..., 8 * C:]
+        loss = base(y_true, sb)
+        shape = tf.shape(sb)
+        sb = tf.reshape(sb, [shape[0], shape[1], shape[2], C, 4])
+        tb = tf.reshape(tb, [shape[0], shape[1], shape[2], C, 4])
+        peak = tf.cast(tf.equal(th, tf.nn.max_pool2d(th, 3, 1, "SAME")) & (th >= KD_BOX_THR), tf.float32)
+        w = tf.maximum(y_true[..., 4 * C:], peak * th)[..., None]
+        err = tf.abs(sb - tb) * w
+        n = tf.maximum(tf.reduce_sum(w, axis=[1, 2, 3, 4]), 1.0)
+        kd = (wh_weight * tf.reduce_sum(err[..., :2], axis=[1, 2, 3, 4]) + tf.reduce_sum(err[..., 2:], axis=[1, 2, 3, 4])) / n
+        return loss + KD_BOX * kd
+
+    return box_loss
+
+
+def find_teacher_weights():
+    for root in (Path("/kaggle/input"), Path("outputs") / "teacher", Path("/content/teacher"), DATA):
+        if root.exists():
+            hits = sorted(root.rglob(TEACHER_WEIGHTS))
+            if hits:
+                return hits[0]
+    raise FileNotFoundError(f"KD_HM/KD_BOX > 0 nhưng không tìm thấy {TEACHER_WEIGHTS} (Add Input output kernel thầy, "
+                            f"hoặc chép vào outputs/teacher/; hoặc đặt KD_HM = KD_BOX = 0)")
 
 
 class DetDataset(tf.keras.utils.PyDataset):
@@ -648,19 +707,20 @@ def evaluate(predict_fn, samples, X, iou_thr=0.5):
 
 
 class MapCheckpoint(tf.keras.callbacks.Callback):
-    def __init__(self, path):
+    def __init__(self, path, net):
         super().__init__()
+        self.net = net                         # model trò (khi distill, self.model là model bọc trò + thầy)
         self.path, self.best, self.best_epoch, self.t = path, -1.0, 0, time.time()
         self.ref, self.ref_epoch = -1.0, 0   # mốc để tính kiên nhẫn (phải vượt MIN_DELTA)
 
     def on_epoch_end(self, epoch, logs=None):
         if (epoch + 1) % EVAL_EVERY and epoch + 1 != EPOCHS:
             return
-        m, _ = evaluate(lambda x: self.model.predict(x, batch_size=64, verbose=0), val_s, X_val)
+        m, _ = evaluate(lambda x: self.net.predict(x, batch_size=64, verbose=0), val_s, X_val)
         mark = ""
         if m >= self.best:
             self.best, self.best_epoch, mark = m, epoch + 1, "  <- tốt nhất, đã lưu"
-            self.model.save_weights(self.path)
+            self.net.save_weights(self.path)
         per_ep = (time.time() - self.t) / (epoch + 1)
         note = ""
         if PATIENCE > 0:
@@ -691,19 +751,38 @@ if PATIENCE > 0:
     _lr = LR
 else:
     _lr = tf.keras.optimizers.schedules.CosineDecay(LR, steps, alpha=0.05)
-model.compile(optimizer=tf.keras.optimizers.Adam(_lr),
-              loss=[make_heat_loss(C), make_box_loss(C)],
-              # Tắt XLA: trên GPU Keras 3 tự bật XLA, mà XLA không có đạo hàm của resize nearest
-              # (ResizeNearestNeighborGrad). Không ảnh hưởng mô hình hay file TFLite.
-              jit_compile=False)
-ckpt = MapCheckpoint(str(OUT / "tiny_det_best.weights.h5"))
+USE_KD = KD_HM > 0 or KD_BOX > 0
+if USE_KD:
+    assert KD_WEIGHT == 0, "Không bật cùng lúc distill offline (KD_WEIGHT) và online (KD_HM/KD_BOX)"
+    teacher = build_model(C, TEACHER_ALPHA, TEACHER_NECK, name="teacher")
+    _tw = find_teacher_weights()
+    teacher.load_weights(_tw)
+    teacher.trainable = False
+    m_t, _ = evaluate(lambda x: teacher.predict(x, batch_size=64, verbose=0), val_s, X_val)
+    print(f"Thầy: {_tw} | {teacher.count_params():,} tham số | val mAP50 {m_t:.3f} "
+          f"| KD_HM {KD_HM}, KD_BOX {KD_BOX} (thầy chỉ dùng lúc train, không nộp)")
+    _inp = tf.keras.Input((INPUT_H, INPUT_W, 3))
+    s_heat, s_box = model(_inp)
+    t_heat, t_box = teacher(_inp, training=False)
+    train_model = tf.keras.Model(_inp, [L.Concatenate(name="kd_heat")([s_heat, t_heat]),
+                                        L.Concatenate(name="kd_box")([s_box, t_box, t_heat])], name="kd_wrap")
+    _losses = [make_kd_heat_loss(C), make_kd_box_loss(C)]
+else:
+    train_model = model
+    _losses = [make_heat_loss(C), make_box_loss(C)]
+train_model.compile(optimizer=tf.keras.optimizers.Adam(_lr),
+                    loss=_losses,
+                    # Tắt XLA: trên GPU Keras 3 tự bật XLA, mà XLA không có đạo hàm của resize nearest
+                    # (ResizeNearestNeighborGrad). Không ảnh hưởng mô hình hay file TFLite.
+                    jit_compile=False)
+ckpt = MapCheckpoint(str(OUT / "tiny_det_best.weights.h5"), model)
 if RESUME_WEIGHTS:
     assert Path(RESUME_WEIGHTS).exists(), f"Không thấy {RESUME_WEIGHTS} - đặt RESUME_WEIGHTS = \"\" để train lại"
     print(f"BỎ QUA TRAIN - nạp checkpoint: {RESUME_WEIGHTS}")
     model.load_weights(RESUME_WEIGHTS)
 else:
     t0 = time.time()
-    model.fit(DetDataset(train_s, C, BATCH, seed=SEED, workers=WORKERS, use_multiprocessing=False, max_queue_size=16),
+    train_model.fit(DetDataset(train_s, C, BATCH, seed=SEED, workers=WORKERS, use_multiprocessing=False, max_queue_size=16),
               epochs=EPOCHS, verbose=0, callbacks=[ckpt])
     print(f"Train xong sau {(time.time() - t0) / 60:.1f} phút. Tốt nhất: epoch {ckpt.best_epoch}, val mAP50 {ckpt.best:.3f}")
     model.load_weights(ckpt.path)
