@@ -279,10 +279,39 @@ Trò = đúng kiến trúc s4, train lại từ đầu 160 epoch, thầy = trọ
 | 17/11 | nộp, kiểm tra điểm public, chọn bài chính thức |
 | 18/11 | hạn chót – chỉ để dự phòng, không chạy thí nghiệm mới |
 
-### Ai có thể giúp gì
-- Có Colab/GPU: chạy `tbig` (Bước 2) song song với Kaggle.
-- Đọc log: dán log vào `kaggle_runs/<mã>/output/` rồi `python kaggle_runs/_tools.py parse <mã> "<thay đổi>"`.
-- Mọi run mới ghi vào `kaggle_runs/results.csv` kèm ghi chú GIỮ / KHÔNG GIỮ và lý do.
+### Việc cho người thứ hai (làm song song với `bakd`)
+
+**Việc 1 – chạy model thầy `tbig` (Bước 2), quan trọng nhất.**
+File sẵn: `kaggle_runs/tbig/edgeai_kaggle.py` (= `edgeai_float.py` với ALPHA 0.75, NECK_CH 96, 474.579 tham số,
+tắt intent). Vượt trần 200k là **cố ý** vì thầy không nộp; dòng `[LỖI] Số tham số` ở cuối log là bình thường.
+
+Nên chạy bằng **tài khoản Kaggle của bạn** (30 giờ GPU/tuần riêng, không bị ngắt như Colab):
+1. Vào trang cuộc thi, bấm Join (đồng ý luật) nếu chưa.
+2. Code → New Notebook → File → Import / dán toàn bộ `kaggle_runs/tbig/edgeai_kaggle.py` vào 1 ô.
+3. Add Input → Competition `egde-ai-challenge-2026-lan-2-qualifiers`.
+4. Settings: Accelerator **GPU T4 x2**, Internet **tắt** (không cần).
+5. **Save Version → Save & Run All (Commit)** rồi có thể tắt máy; chạy xong xem tab Output.
+6. Xem log: dòng `epoch ...: ... | XXs/epoch`. Ước tính 2–2,5 lần s4 (~50 s/epoch) -> khoảng 4–5,5 giờ cho 160 epoch.
+
+Colab cũng được (xem mục 2b), nhưng Colab miễn phí hay ngắt; `RESUME_WEIGHTS` chỉ nạp checkpoint tốt nhất,
+**không train tiếp**, nên thầy có thể bị train thiếu.
+
+Chạy xong, gửi lại:
+- `tiny_det_float.weights.h5` (trọng số thầy) -> `git add -f kaggle_runs/tbig/output/tiny_det_float.weights.h5`
+  rồi push (file bị `.gitignore` chặn nên phải `-f`), hoặc gửi trực tiếp.
+- Log -> `kaggle_runs/tbig/output/` rồi `python kaggle_runs/_tools.py parse tbig "Thầy ALPHA 0.75, NECK_CH 96"`.
+- Quyết định theo Bước 2: thầy **≥ 0,975** mới dùng để distill (`tkd`).
+
+**Việc 2 – hỏi BTC cho chắc** (trên Discussion của cuộc thi hoặc kênh BTC):
+- Distill từ model thầy **tự train từ đầu trên dữ liệu BTC** (thầy lớn hơn 200k tham số, không nộp) có hợp lệ ở vòng loại không?
+- Câu "pretrained ... (chỉ ở VÒNG CHUNG KẾT)" là *chỉ được dùng* ở chung kết, hay *chỉ phải khai báo* ở chung kết?
+- Câu trả lời ảnh hưởng trực tiếp tới `bakd`/`tkd` và `pre35`; ghi kết quả vào mục "Luật chơi vòng loại".
+
+**Việc 3 – đọc kết quả và soát lại.**
+- Khi `bakd` xong (log trong `kaggle_runs/bakd/output/`), so theo tiêu chí Bước 1 và ghi GIỮ / KHÔNG GIỮ vào `results.csv`.
+- Đọc lại phần distill online trong `edgeai_float.py` (`make_kd_heat_loss`, `make_kd_box_loss`, đoạn `USE_KD`) xem có chỗ nào sai.
+
+Quy ước chung: mọi run mới ghi vào `kaggle_runs/results.csv` kèm ghi chú GIỮ / KHÔNG GIỮ và lý do; pull trước khi sửa.
 
 ## Cần khai báo với BTC (vòng chung kết)
 
