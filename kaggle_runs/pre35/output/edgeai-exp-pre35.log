@@ -1,0 +1,98 @@
+[{"stream_name":"stdout","time":81.763320507,"data":"Dữ liệu: /kaggle/input/competitions/egde-ai-challenge-2026-lan-2-qualifiers\n"}
+,{"stream_name":"stdout","time":81.763381877,"data":"Kết quả: /kaggle/working\n"}
+,{"stream_name":"stdout","time":91.506386206,"data":"TensorFlow 2.21.0 | GPU: ['/physical_device:GPU:0', '/physical_device:GPU:1']\n"}
+,{"stream_name":"stdout","time":91.518263993,"data":"\n"}
+,{"stream_name":"stdout","time":91.518308023,"data":"===== KIỂM TRA TRƯỚC KHI TRAIN =====\n"}
+,{"stream_name":"stdout","time":91.518314817,"data":"7 lớp: ['bottle', 'cup', 'phone', 'book', 'mouse', 'box', 'toy_car']\n"}
+,{"stream_name":"stdout","time":91.626123072,"data":"Ảnh test: 4000 | sample_id DETECTION cần: 4000 | khớp: 4000\n"}
+,{"stream_name":"stdout","time":91.706749717,"data":"  00001.txt: ['1 0.559375 0.295833 0.093750 0.116667', '3 0.235937 0.793750 0.303125 0.212500', '6 0.801562 0.356250 0.078125 0.087500', '5 0.257812 0.472917 0.296875 0.379167']\n"}
+,{"stream_name":"stdout","time":91.714030279,"data":"  00002.txt: ['1 0.262500 0.712500 0.187500 0.283333', '5 0.426563 0.479167 0.278125 0.400000', '6 0.518750 0.352083 0.037500 0.037500', '0 0.814063 0.587500 0.115625 0.308333']\n"}
+,{"stream_name":"stdout","time":91.72204515,"data":"  00003.txt: ['2 0.757812 0.662500 0.203125 0.141667', '6 0.290625 0.372917 0.037500 0.037500', '1 0.207813 0.483333 0.078125 0.175000', '0 0.270313 0.495833 0.096875 0.325000']\n"}
+,{"stream_name":"stdout","time":97.911776215,"data":"Kiểm tra định dạng nhãn trên 300 ảnh, 2067 dòng:\n"}
+,{"stream_name":"stdout","time":97.911818225,"data":"  yolo            hợp lệ 2067/2067\n"}
+,{"stream_name":"stdout","time":97.911826817,"data":"  xyxy_px         hợp lệ 3/2067\n"}
+,{"stream_name":"stdout","time":97.911829511,"data":"  xyxy_norm       hợp lệ 3/2067\n"}
+,{"stream_name":"stdout","time":97.911832086,"data":"  xyxy_px_last    hợp lệ 0/2067\n"}
+,{"stream_name":"stdout","time":97.911834439,"data":"  xyxy_norm_last  hợp lệ 0/2067\n"}
+,{"stream_name":"stdout","time":97.91183696,"data":"  -\u003e định dạng còn hợp lý sau khi xét pixel/chuẩn hóa: ['yolo', 'xyxy_norm', 'xyxy_px_last']\n"}
+,{"stream_name":"stdout","time":97.911840081,"data":"=\u003e Định dạng nhãn: yolo\n"}
+,{"stream_name":"stdout","time":97.999625816,"data":"Đã vẽ box lên 6 ảnh: /kaggle/working/label_preview  (MỞ RA XEM trước khi chạy thật!)\n"}
+,{"stream_name":"stdout","time":98.076172356,"data":"\n"}
+,{"stream_name":"stdout","time":98.076205946,"data":"===== DETECTOR =====\n"}
+,{"stream_name":"stdout","time":98.076212531,"data":"Đang nạp ảnh...\n"}
+,{"stream_name":"stdout","time":208.362873615,"data":"Số box train mỗi lớp: {'bottle': 4629, 'cup': 4561, 'phone': 4570, 'book': 4190, 'mouse': 4413, 'box': 4099, 'toy_car': 4554}\n"}
+,{"stream_name":"stdout","time":208.419456363,"data":"Train 4800 | Val 1200 | Test 4000 | đầu vào 320x240 | nạp mất 110s\n"}
+,{"stream_name":"stdout","time":214.557798877,"data":"Downloading data from https://storage.googleapis.com/tensorflow/keras-applications/mobilenet_v2/mobilenet_v2_weights_tf_dim_ordering_tf_kernels_0.35_224_no_top.h5\n"}
+,{"stream_name":"stdout","time":214.810594982,"data":"\r\u001b[1m      0/2019640\u001b[0m \u001b[37m━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 0s/step\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m2019640/2019640\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 0us/step\n"}
+,{"stream_name":"stdout","time":215.364278723,"data":"Backbone khởi tạo từ ImageNet (MobileNetV2 alpha 0.35)\n"}
+,{"stream_name":"stdout","time":215.530249661,"data":"Số tham số: 138,611 (giới hạn 200,000)\n"}
+,{"stream_name":"stdout","time":479.377665035,"data":"  epoch   5: loss 1.554 | val mAP50 0.241  \u003c- tốt nhất, đã lưu | 52.8s/epoch, tối đa còn ~136 phút\n"}
+,{"stream_name":"stdout","time":711.433115367,"data":"  epoch  10: loss 1.256 | val mAP50 0.684  \u003c- tốt nhất, đã lưu | 49.6s/epoch, tối đa còn ~124 phút\n"}
+,{"stream_name":"stdout","time":940.367479263,"data":"  epoch  15: loss 1.125 | val mAP50 0.823  \u003c- tốt nhất, đã lưu | 48.3s/epoch, tối đa còn ~117 phút\n"}
+,{"stream_name":"stdout","time":1166.118296964,"data":"  epoch  20: loss 1.061 | val mAP50 0.838  \u003c- tốt nhất, đã lưu | 47.5s/epoch, tối đa còn ~111 phút\n"}
+,{"stream_name":"stdout","time":1389.488270993,"data":"  epoch  25: loss 1.004 | val mAP50 0.886  \u003c- tốt nhất, đã lưu | 47.0s/epoch, tối đa còn ~106 phút\n"}
+,{"stream_name":"stdout","time":1613.427201242,"data":"  epoch  30: loss 0.951 | val mAP50 0.918  \u003c- tốt nhất, đã lưu | 46.6s/epoch, tối đa còn ~101 phút\n"}
+,{"stream_name":"stdout","time":1837.778782238,"data":"  epoch  35: loss 0.926 | val mAP50 0.880 | 46.3s/epoch, tối đa còn ~97 phút\n"}
+,{"stream_name":"stdout","time":2065.231238642,"data":"  epoch  40: loss 0.884 | val mAP50 0.932  \u003c- tốt nhất, đã lưu | 46.2s/epoch, tối đa còn ~92 phút\n"}
+,{"stream_name":"stdout","time":2291.962676412,"data":"  epoch  45: loss 0.872 | val mAP50 0.937  \u003c- tốt nhất, đã lưu | 46.1s/epoch, tối đa còn ~88 phút\n"}
+,{"stream_name":"stdout","time":2515.92149026,"data":"  epoch  50: loss 0.848 | val mAP50 0.919 | 46.0s/epoch, tối đa còn ~84 phút\n"}
+,{"stream_name":"stdout","time":2737.189767048,"data":"  epoch  55: loss 0.814 | val mAP50 0.941  \u003c- tốt nhất, đã lưu | 45.8s/epoch, tối đa còn ~80 phút\n"}
+,{"stream_name":"stdout","time":2964.500317052,"data":"  epoch  60: loss 0.794 | val mAP50 0.950  \u003c- tốt nhất, đã lưu | 45.8s/epoch, tối đa còn ~76 phút\n"}
+,{"stream_name":"stdout","time":3187.702067621,"data":"  epoch  65: loss 0.792 | val mAP50 0.954  \u003c- tốt nhất, đã lưu | 45.7s/epoch, tối đa còn ~72 phút\n"}
+,{"stream_name":"stdout","time":3410.181115346,"data":"  epoch  70: loss 0.770 | val mAP50 0.887 | 45.6s/epoch, tối đa còn ~68 phút\n"}
+,{"stream_name":"stdout","time":3635.850828911,"data":"  epoch  75: loss 0.747 | val mAP50 0.950 | 45.6s/epoch, tối đa còn ~65 phút\n"}
+,{"stream_name":"stdout","time":3858.543222658,"data":"  epoch  80: loss 0.737 | val mAP50 0.957  \u003c- tốt nhất, đã lưu | 45.5s/epoch, tối đa còn ~61 phút\n"}
+,{"stream_name":"stdout","time":4083.754510216,"data":"  epoch  85: loss 0.732 | val mAP50 0.952 | 45.5s/epoch, tối đa còn ~57 phút\n"}
+,{"stream_name":"stdout","time":4304.487049587,"data":"  epoch  90: loss 0.719 | val mAP50 0.959  \u003c- tốt nhất, đã lưu | 45.4s/epoch, tối đa còn ~53 phút\n"}
+,{"stream_name":"stdout","time":4525.978786585,"data":"  epoch  95: loss 0.714 | val mAP50 0.960  \u003c- tốt nhất, đã lưu | 45.4s/epoch, tối đa còn ~49 phút\n"}
+,{"stream_name":"stdout","time":4745.655969613,"data":"  epoch 100: loss 0.689 | val mAP50 0.949 | 45.3s/epoch, tối đa còn ~45 phút\n"}
+,{"stream_name":"stdout","time":4964.839691233,"data":"  epoch 105: loss 0.687 | val mAP50 0.965  \u003c- tốt nhất, đã lưu | 45.2s/epoch, tối đa còn ~41 phút\n"}
+,{"stream_name":"stdout","time":5186.419297544,"data":"  epoch 110: loss 0.677 | val mAP50 0.961 | 45.2s/epoch, tối đa còn ~38 phút\n"}
+,{"stream_name":"stdout","time":5408.376166469,"data":"  epoch 115: loss 0.665 | val mAP50 0.965  \u003c- tốt nhất, đã lưu | 45.2s/epoch, tối đa còn ~34 phút\n"}
+,{"stream_name":"stdout","time":5626.528363311,"data":"  epoch 120: loss 0.658 | val mAP50 0.963 | 45.1s/epoch, tối đa còn ~30 phút\n"}
+,{"stream_name":"stdout","time":5846.833882238,"data":"  epoch 125: loss 0.653 | val mAP50 0.963 | 45.1s/epoch, tối đa còn ~26 phút\n"}
+,{"stream_name":"stdout","time":6067.38872251,"data":"  epoch 130: loss 0.654 | val mAP50 0.963 | 45.0s/epoch, tối đa còn ~23 phút\n"}
+,{"stream_name":"stdout","time":6287.924620664,"data":"  epoch 135: loss 0.640 | val mAP50 0.966  \u003c- tốt nhất, đã lưu | 45.0s/epoch, tối đa còn ~19 phút\n"}
+,{"stream_name":"stdout","time":6511.206648667,"data":"  epoch 140: loss 0.634 | val mAP50 0.966  \u003c- tốt nhất, đã lưu | 45.0s/epoch, tối đa còn ~15 phút\n"}
+,{"stream_name":"stdout","time":6731.247745039,"data":"  epoch 145: loss 0.634 | val mAP50 0.966  \u003c- tốt nhất, đã lưu | 44.9s/epoch, tối đa còn ~11 phút\n"}
+,{"stream_name":"stdout","time":6952.150048843,"data":"  epoch 150: loss 0.634 | val mAP50 0.965 | 44.9s/epoch, tối đa còn ~7 phút\n"}
+,{"stream_name":"stdout","time":7177.041737456,"data":"  epoch 155: loss 0.626 | val mAP50 0.967  \u003c- tốt nhất, đã lưu | 44.9s/epoch, tối đa còn ~4 phút\n"}
+,{"stream_name":"stdout","time":7398.948387868,"data":"  epoch 160: loss 0.493 | val mAP50 0.966 | 44.9s/epoch, tối đa còn ~0 phút\n"}
+,{"stream_name":"stdout","time":7398.952015498,"data":"Train xong sau 119.7 phút. Tốt nhất: epoch 155, val mAP50 0.967\n"}
+,{"stream_name":"stdout","time":7425.668541893,"data":"\n"}
+,{"stream_name":"stdout","time":7425.66859485,"data":"mAP50 val (float32): 0.967\n"}
+,{"stream_name":"stdout","time":7425.668601755,"data":"  lớp                       AP@0.5  AP@0.3  chẩn đoán\n"}
+,{"stream_name":"stdout","time":7425.668607238,"data":"  bottle                     0.977   0.986  \n"}
+,{"stream_name":"stdout","time":7425.668612265,"data":"  cup                        0.982   0.987  \n"}
+,{"stream_name":"stdout","time":7425.668616549,"data":"  phone                      0.964   0.974  \n"}
+,{"stream_name":"stdout","time":7425.668620753,"data":"  book                       0.961   0.968  \n"}
+,{"stream_name":"stdout","time":7425.668624869,"data":"  mouse                      0.953   0.969  \n"}
+,{"stream_name":"stdout","time":7425.668628956,"data":"  box                        0.989   0.995  \n"}
+,{"stream_name":"stdout","time":7425.668633044,"data":"  toy_car                    0.943   0.965  \n"}
+,{"stream_name":"stdout","time":7427.034902669,"data":"Backbone khởi tạo từ ImageNet (MobileNetV2 alpha 0.35)\n"}
+,{"stream_name":"stdout","time":7427.610187558,"data":"\n"}
+,{"stream_name":"stdout","time":7427.610220293,"data":"===== KIỂM TRA RÀNG BUỘC =====\n"}
+,{"stream_name":"stdout","time":7427.610225971,"data":"  [OK] Đầu vào 320x240 (\u003c= 320x240)\n"}
+,{"stream_name":"stdout","time":7427.610231106,"data":"  [OK] Số tham số 138,611 (\u003c= 200,000)\n"}
+,{"stream_name":"stdout","time":7427.610236148,"data":"  [OK] Dung lượng 936 KB (\u003c= 1536 KB, trọng số float32)\n"}
+,{"stream_name":"stdout","time":7427.61024167,"data":"\n"}
+,{"stream_name":"stdout","time":7427.610246567,"data":"mAP50 val dùng để nộp: 0.967 (float, 1 lần chạy)\n"}
+,{"stream_name":"stdout","time":7427.61025164,"data":"Ước lượng điểm detection: 0,70 x 96.7 = 67.7\n"}
+,{"stream_name":"stdout","time":7525.028374278,"data":"Đã lưu det_predictions.json (399968 box, model float)\n"}
+,{"stream_name":"stdout","time":7525.032371437,"data":"\n"}
+,{"stream_name":"stdout","time":7525.03241171,"data":"===== INTENT =====\n"}
+,{"stream_name":"stdout","time":7547.934019323,"data":"Holdout 20% (câu gốc): accuracy 1.0000\n"}
+,{"stream_name":"stdout","time":7568.315538138,"data":"6000 câu gốc -\u003e 13049 câu train (DICT_AUGMENT = True) | phân bố {'COUNT': 2351, 'EXIST': 2354, 'LIST': 1200, 'LOCATION': 2344, 'OUT_OF_SCOPE': 4800}\n"}
+,{"stream_name":"stdout","time":7568.315594254,"data":"Tham số 18,213 | vocab 263\n"}
+,{"stream_name":"stdout","time":7569.157158114,"data":"Phân bố dự đoán test: {'LIST': 800, 'EXIST': 800, 'COUNT': 800, 'OUT_OF_SCOPE': 800, 'LOCATION': 800} (test cân bằng: mỗi nhãn 800)\n"}
+,{"stream_name":"stdout","time":7569.1572,"data":"\n"}
+,{"stream_name":"stdout","time":7569.157207567,"data":"===== SUBMISSION =====\n"}
+,{"stream_name":"stdout","time":7572.666449749,"data":"Detection: 4000 ảnh (thiếu 0) | Intent: 4000 câu (thiếu 0)\n"}
+,{"stream_name":"stdout","time":7572.666494564,"data":"OK - file hợp lệ, sẵn sàng nộp: /kaggle/working/submission.csv\n"}
+,{"stream_name":"stderr","time":7583.506013775,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":7583.5060757,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":7583.916321485,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":7583.916360617,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":7585.733576393,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":7586.517040098,"data":"[NbConvertApp] Writing 529944 bytes to __results__.html\n"}
+]

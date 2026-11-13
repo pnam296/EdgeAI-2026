@@ -8,10 +8,10 @@ Hạn nộp: **18/11/2026**.
 
 | | |
 |---|---|
-| Điểm public tốt nhất | **96,88** (run `A45-noaug`, dự đoán bằng model float) |
-| mAP50 val detection | 0,9575 (float) |
+| Điểm public tốt nhất | **97,2** (run `A45-float`, dự đoán bằng model float, nộp 12/11/2026) |
+| mAP50 val detection | 0,966 (float, run `s4`, chưa nộp) |
 | Intent | accuracy 1,0 trên holdout, đã đạt tối đa |
-| Mốc (cấu hình đang giữ) | `edgeai_float.py`: 320×240, ALPHA 0.45, 184.723 tham số, 160 epoch |
+| Mốc (cấu hình đang giữ) | `edgeai_float.py`: 320×240, ALPHA 0.45, STRIDE4, 196.307 tham số, 160 epoch |
 | Mục tiêu | 98 điểm, tức mAP50 detection khoảng 0,971 trên tập public |
 
 **Công thức điểm** (đã khớp với điểm public): `điểm = 0,7 × mAP50 detection × 100 + 30 × accuracy intent`.
@@ -26,6 +26,9 @@ mAP trên tập public thường thấp hơn mAP val khoảng 0,002.
 | Dung lượng model | ≤ 1,5 MB | khoảng 1.090 KB (trọng số float32) |
 | Lượng tử hóa INT8 | **không bắt buộc ở vòng loại** (thông báo BTC 11/11/2026) | dùng model float |
 | TTA (chạy model nhiều lần/ảnh, vd lật ngang) | **không được dùng** | 1 lần chạy/ảnh |
+| Pretrained / dữ liệu ngoài | **chỉ được dùng ở vòng chung kết** | train từ đầu (`PRETRAINED = False`, `KD_WEIGHT = 0`) |
+| Ensemble nhiều model | **không được dùng** | nộp 1 model |
+| Distillation | được, nhưng thầy phải train từ đầu trên dữ liệu BTC | xem mục Kế hoạch |
 
 > Từ 11/11/2026, script mới **không** xuất TFLite hay INT8 nữa. Các run cũ trong `kaggle_runs/` và file
 > `edgeai_kaggle.py` vẫn còn phần INT8, chỉ giữ lại làm lịch sử.
@@ -185,24 +188,106 @@ git push
 | es | dừng sớm thay cosine | float 0,957, INT8 0,945 | không giữ (khi còn bắt buộc INT8) |
 | noaug | tắt augment 15 epoch cuối | 0,952 | không giữ (nhiễu) |
 | A45 | ALPHA 0.45 + EMA/GIoU/WH_SQRT/SPLIT_BOX | float 0,956, INT8 0,941 | không giữ |
-| **A45-noaug** | **ALPHA 0.45** | **float 0,9575** | **giữ, mốc hiện tại** |
+| A45-noaug | ALPHA 0.45 | float 0,9575 | giữ (mốc cũ) |
+| A45-float | ALPHA 0.45, không tắt augment (Colab) | float 0,960, public 97,2 | giữ |
+| kd | distill heatmap từ thầy YOLO11s (val 0,989–0,991) | 0,958 | không giữ (thấp hơn đối chứng A45-float 0,960) |
+| **s4** | **thêm tầng stride 4 (lưới 80x60), 196.307 tham số** | **float 0,966** | **giữ, mốc hiện tại: cả 7 lớp tăng, toy_car +0,011** |
+| pre35 | backbone ImageNet alpha 0.35 + stride 4, 138.611 tham số | float 0,967 | **không dùng ở vòng loại (cấm pretrained)**; ngang s4 với ít hơn 58k tham số -> để dành cho chung kết |
 | (thử trên máy) | TTA lật ngang trên A45-noaug | 0,9645 | **không dùng: thể lệ cấm TTA** |
 
 Kinh nghiệm rút ra:
 - Độ phân giải đầu vào và độ rộng backbone (ALPHA) là hai đòn bẩy lớn nhất.
 - Thay đổi augment, cách gán nhãn hay lịch học gần như không tác dụng.
 - Tắt augment ở cuối không giúp gì: epoch tốt nhất của A45-noaug là 135, trước lúc tắt augment.
+- Distill chỉ heatmap không giúp. AP@0.3 cao hơn AP@0.5 rõ ở toy_car/phone -> nút thắt là định vị box.
 
-## Hướng tiếp theo để lên 98
+## Kế hoạch vòng loại (cập nhật 13/11/2026)
 
-Cần thêm khoảng +0,016 mAP val. Thể lệ cấm TTA, nên mọi cải thiện phải nằm trong model (1 lần chạy mỗi ảnh).
+Cần thêm khoảng **+0,005 mAP** so với s4 (0,966 -> ~0,971) để lên 98 điểm.
 
-1. **Chưng cất từ model thầy**: train YOLO11s không giới hạn tham số, dùng dự đoán của nó làm nhãn mềm. Dự kiến +0,005 đến +0,015. Đây là đòn bẩy lớn nhất.
-2. **Dùng hết ngân sách tham số**: NECK_CH 64 → 80 (khoảng 199k), dự kiến +0,001 đến +0,003.
-3. **TRAIN_ON_ALL** ở lần chạy chốt cuối: +0,003 đến +0,008.
+### Luật chơi vòng loại (đã chốt, KHÔNG làm)
 
-## Cần khai báo với BTC
+| Cấm ở vòng loại | Hệ quả cho repo |
+|---|---|
+| Pretrained / dữ liệu ngoài (chỉ được dùng ở chung kết) | `PRETRAINED = False`. Run `pre35` (0,967) và `kd` (thầy YOLO11s pretrained COCO) **không hợp lệ**, chỉ để tham khảo |
+| TTA (chạy model nhiều lần mỗi ảnh) | 1 lần chạy/ảnh |
+| Ensemble | nộp **1 model duy nhất**; không trộn dự đoán nhiều model, cũng không dùng ensemble làm thầy |
+| Dùng ảnh test để gán nhãn / pseudo-label / train | thầy chỉ chạy trên ảnh train |
+
+Distillation **được dùng**, nhưng thầy phải **train từ đầu trên dữ liệu BTC** (không mang kiến thức YOLO pretrained vào).
+Thầy chỉ dùng lúc train, không có trong bài nộp; code thầy nộp kèm để tái tạo được.
+
+Hướng đã loại: NECK_CH lớn hơn không còn chỗ (s4 đã 196.307 / 200.000 tham số); augment, gán nhãn, lịch học,
+tắt augment cuối đều đã thử, không tác dụng.
+
+### Vì sao run kd cũ không giúp, và sẽ làm khác thế nào
+
+Run kd lấy **box cuối** của thầy rồi vẽ lại thành heatmap Gaussian -> gần như trùng nhãn thật, trò học thêm rất ít.
+Nút thắt hiện tại là **định vị box** (AP@0.3 cao hơn AP@0.5 rõ ở toy_car, phone), mà kd cũ không distill box.
+
+Cách mới (**distill dày, online**):
+- Thầy (đóng băng) chạy **song song** trên đúng batch đã augment của trò -> không cần file nhãn mềm, không lệch augment.
+- Loss thêm:
+  - `KD_HM`: trò bắt chước **heatmap thô của thầy trên mọi ô** lưới (cả chỗ thầy phân vân giữa các lớp).
+  - `KD_BOX`: L1 giữa box của trò và box của thầy, **có trọng số theo độ tự tin của thầy** (ô thầy chắc chắn có vật).
+  - (chỉ khi thầy cùng họ CenterNet lớn hơn) `KD_FEAT`: bắt chước feature neck qua 1 lớp 1x1 chuyển kênh.
+- Thầy và trò cùng kiến trúc CenterNet, cùng lưới 80x60 (stride 4) -> ghép từng ô trực tiếp, không phải giải mã box.
+
+### Các bước và mọi trường hợp
+
+Quy ước so sánh: **TB AP@0.5 của 7 lớp trên val** (seed 42, 20%) so với mốc **s4 = 0,9656**.
+Chênh **< 0,003 = nhiễu**. Mỗi run khoảng 2,3 giờ GPU (T4 x2 Kaggle).
+
+**Bước 1 – run `bakd`: tự distill (born-again), thầy = s4.**
+Trò = đúng kiến trúc s4, train lại từ đầu 160 epoch, thầy = trọng số `tiny_det_best.weights.h5` của kernel s4
+(thêm `kernel_sources: phngnam296/edgeai-exp-s4`). Không tốn công train thầy.
+- **≥ 0,969** (+0,003 trở lên): GIỮ, `bakd` thành mốc. Sang Bước 2 nếu còn ≥ 2 ngày, không thì sang Bước 3.
+- **0,963 – 0,969** (nhiễu): chạy thêm **1 lần** đổi trọng số (`KD_BOX` x2, hoặc chỉ `KD_BOX` không `KD_HM`) để xem
+  thành phần nào có tác dụng. Vẫn nhiễu -> bỏ born-again, sang Bước 2.
+- **< 0,963** (tệ hơn): kiểm tra loss KD có lấn loss gốc không (log từng thành phần), giảm trọng số KD 1 lần;
+  vẫn tệ -> sang Bước 2.
+- Lỗi khi chạy (không nạp được thầy, lệch shape): sửa và chạy lại, không tính là kết quả.
+
+**Bước 2 – thầy lớn train từ đầu (`tbig`) rồi distill (`tkd`).**
+- `tbig`: cùng code, **bỏ trần tham số**: ALPHA 1.0, NECK_CH 128, STRIDE4, train trên 4.800 ảnh train
+  (không val, không test). Ghi mAP val của thầy vào `results.csv`.
+  - Thầy **≥ 0,975**: đủ mạnh -> chạy `tkd` (trò s4 + KD_HM + KD_BOX + KD_FEAT).
+  - Thầy **< 0,975** (không hơn s4 rõ): distill khó giúp -> bỏ, sang Bước 3 với mốc tốt nhất hiện có.
+  - Có thể chạy `tbig` trên Colab **song song** với `bakd` trên Kaggle để tiết kiệm thời gian.
+- `tkd`: cùng tiêu chí giữ / nhiễu / tệ như Bước 1 (so với mốc hiện tại, có thể là `bakd`).
+
+**Bước 3 – run chốt `final`: mốc tốt nhất + `TRAIN_ON_ALL = True`** (train trên cả 6.000 ảnh, dự kiến +0,003 đến +0,008).
+- Không còn val để đo -> số epoch cố định bằng epoch tốt nhất của mốc (không chọn theo val).
+- Nếu mốc có KD: dùng thầy đã train trên 4.800 ảnh (hoặc train lại thầy trên 6.000 ảnh nếu còn thời gian).
+- Kiểm tra bắt buộc: đủ 4.000 ảnh test, ràng buộc OK, `submission.csv` hợp lệ.
+
+**Bước 4 – nộp.**
+- Nộp `final`. Nếu điểm public **thấp hơn** bản đang có (97,2 của A45-float) -> chọn lại bản cũ làm bài chính thức.
+- Luôn giữ 1 bản dự phòng đã nộp được (`s4` hoặc `A45-float`).
+- Không có gì cải thiện ở Bước 1–2 -> nộp **s4 + TRAIN_ON_ALL**.
+
+### Lịch dự kiến
+
+| Ngày | Việc |
+|---|---|
+| 13–14/11 | viết code distill online; chạy `bakd` (Kaggle) + `tbig` (Colab) song song |
+| 15/11 | đọc kết quả; chạy run phụ của Bước 1 hoặc `tkd` |
+| 16/11 | chạy `final` (TRAIN_ON_ALL) |
+| 17/11 | nộp, kiểm tra điểm public, chọn bài chính thức |
+| 18/11 | hạn chót – chỉ để dự phòng, không chạy thí nghiệm mới |
+
+### Ai có thể giúp gì
+- Có Colab/GPU: chạy `tbig` (Bước 2) song song với Kaggle.
+- Đọc log: dán log vào `kaggle_runs/<mã>/output/` rồi `python kaggle_runs/_tools.py parse <mã> "<thay đổi>"`.
+- Mọi run mới ghi vào `kaggle_runs/results.csv` kèm ghi chú GIỮ / KHÔNG GIỮ và lý do.
+
+## Cần khai báo với BTC (vòng chung kết)
+
+Vòng loại: bài nộp không dùng pretrained, dữ liệu ngoài hay ensemble. Danh sách dưới chỉ áp dụng nếu dùng lại các run `pre35` / `kd` ở chung kết.
 
 - Trọng số pretrained MobileNetV2 (ImageNet, Keras Applications), dùng trong detector.
 - Trọng số pretrained YOLO11n (COCO): chỉ dùng tham khảo, không có trong bài nộp.
+- Trọng số pretrained YOLO11s (COCO, Ultralytics): khởi tạo model thầy (`teacher_yolo.py`), chỉ train trên
+  tập train, sinh nhãn mềm `teacher_soft.json` để chưng cất khi train. Không có trong bài nộp.
+  Hồ sơ nộp cần kèm `teacher_yolo.py` + `teacher_soft.json` (seed 42, 2 fold) để tái tạo được.
 - Dữ liệu intent sinh thêm bằng cách thay tên vật thể trong câu train.

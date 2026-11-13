@@ -1,0 +1,38 @@
+(Colab, log người dùng dán - rút gọn phần epoch)
+Dữ liệu: /content/data
+Kết quả: outputs
+TensorFlow 2.21.0 | GPU: ['/physical_device:GPU:0']
+Train 4800 | Val 1200 | Test 4000 | đầu vào 320x240 | nạp mất 19s
+Số tham số: 184,723 (giới hạn 200,000)
+  epoch  60: loss 0.639 | val mAP50 0.922
+  epoch 100: loss 0.525 | val mAP50 0.950
+  epoch 120: loss 0.492 | val mAP50 0.955
+  epoch 125: loss 0.483 | val mAP50 0.958
+  epoch 130: loss 0.480 | val mAP50 0.958
+  epoch 135: loss 0.472 | val mAP50 0.956
+  epoch 140: loss 0.465 | val mAP50 0.960  <- tốt nhất
+  epoch 145: loss 0.465 | val mAP50 0.959
+  epoch 150: loss 0.464 | val mAP50 0.960
+  epoch 155: loss 0.459 | val mAP50 0.959
+  epoch 160: loss 0.341 | val mAP50 0.953
+Train xong sau 133.3 phút. Tốt nhất: epoch 140, val mAP50 0.960
+
+mAP50 val (float32): 0.960
+  lớp                       AP@0.5  AP@0.3
+  bottle                     0.975   0.985
+  cup                        0.976   0.984
+  phone                      0.951   0.970
+  book                       0.946   0.962
+  mouse                      0.947   0.965
+  box                        0.987   0.988
+  toy_car                    0.936   0.961
+
+  [OK] Đầu vào 320x240 (<= 320x240)
+  [OK] Số tham số 184,723 (<= 200,000)
+  [OK] Dung lượng 1090 KB (<= 1536 KB, trọng số float32)
+Ước lượng điểm detection: 0,70 x 96.0 = 67.2
+Đã lưu det_predictions.json (398519 box, model float)
+
+Intent holdout accuracy 1.0000 | test phân bố cân bằng ~800/nhãn
+Detection: 4000 ảnh (thiếu 0) | Intent: 4000 câu (thiếu 0)
+OK - file hợp lệ, sẵn sàng nộp: outputs/submission.csv

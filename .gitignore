@@ -27,3 +27,4 @@ det_predictions.json
 # Bí mật
 kaggle.json
 .env
+kaggle_runs/*/teacher_ds/teacher_soft.json

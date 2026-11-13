@@ -50,6 +50,17 @@ PLATEAU = 15
 MIN_DELTA = 0.002             # tăng ít hơn mức này coi như không tiến bộ
 MIN_LR_FRAC = 0.02            # sàn LR = LR * MIN_LR_FRAC
 TRAIN_ON_ALL = False          # True: gộp val vào train khi đã chốt cấu hình (mAP val mất ý nghĩa)
+# Distillation từ model thầy YOLO11s (teacher_yolo.py): file teacher_soft.json (nhãn mềm 2 fold, thầy
+# dự đoán ảnh nó CHƯA thấy) đặt cạnh data hoặc trong outputs/teacher/. Box thầy -> heatmap mềm (đỉnh = score),
+# augment giống hệt box thật; loss thêm KD_WEIGHT * |t-p|^2 * BCE(t, p). Thầy chỉ dùng lúc train, không nộp.
+KD_WEIGHT = 0                 # 0 = tắt distill (giống mốc)
+KD_MIN_SCORE = 0.05           # bỏ box thầy có score thấp hơn
+KD_FILE = "teacher_soft.json"
+# Backbone MobileNetV2 khởi tạo từ ImageNet (Keras chỉ có ALPHA 0.35 / 0.5 / 0.75 / 1.0; cần internet để tải).
+# Trọng số conv không phụ thuộc kích thước ảnh -> dựng bản 224x224 có trọng số rồi chép sang 320x240.
+PRETRAINED = False
+# Thêm tầng stride 4 vào neck -> lưới đầu ra 80x60 thay 40x30 (vật nhỏ như toy_car ~12 px chiếm nhiều ô hơn).
+STRIDE4 = True
 WORKERS = 4                   # số luồng chuẩn bị dữ liệu song song (Kaggle có 4 nhân CPU)
 # Intent
 RUN_INTENT = True
@@ -62,21 +73,37 @@ LABEL_FORMAT = "auto"
 # CHẠY THỬ: True = 300 ảnh train, 2 epoch -> kiểm tra toàn bộ pipeline trong vài phút
 # (nhãn, train, dự đoán float, submission). Chạy thử trước, ổn rồi mới đặt False để chạy thật.
 QUICK_TEST = False
+# ---- Colab ----
+# DATA_DIR: thư mục chứa classes.txt (để "" = tự tìm ở /kaggle/input, /content, ./data, rồi Google Drive).
+DATA_DIR = ""
+# Khi đã mount Google Drive, kết quả + checkpoint ghi thẳng vào Drive -> Colab ngắt vẫn còn.
+DRIVE_OUT = "/content/drive/MyDrive/edgeai_outputs/float"
+# Colab ngắt giữa chừng: đặt = đường dẫn tiny_det_best.weights.h5 (vd DRIVE_OUT + "/tiny_det_best.weights.h5")
+# -> bỏ qua train, nạp checkpoint tốt nhất rồi chạy tiếp phần dự đoán + intent + submission. "" = train bình thường.
+RESUME_WEIGHTS = ""
 
 # ------------------------------- ĐƯỜNG DẪN -------------------------------
 def find_data_dir():
-    """Tìm thư mục chứa classes.txt trong /kaggle/input (hoặc ./data khi chạy ở máy)."""
-    for root in (Path("/kaggle/input"), Path("data"), Path(".")):
+    """Tìm thư mục chứa classes.txt: DATA_DIR -> /kaggle/input -> /content -> ./data -> . -> Google Drive."""
+    if DATA_DIR:
+        return Path(DATA_DIR)
+    for root in (Path("/kaggle/input"), Path("/content/data"), Path("data"), Path("."),
+                 Path("/content/drive/MyDrive")):
         if root.exists():
             hits = sorted(root.rglob("classes.txt"))
             if hits:
                 return hits[0].parent
-    raise FileNotFoundError("Không tìm thấy classes.txt - đã Add Input dataset chưa?")
+    raise FileNotFoundError("Không tìm thấy classes.txt - đã Add Input dataset / giải nén data chưa?")
 
 
 DATA = find_data_dir()
-OUT = Path("/kaggle/working") if Path("/kaggle/working").exists() else Path("outputs")
-OUT.mkdir(exist_ok=True)
+if Path("/kaggle/working").exists():
+    OUT = Path("/kaggle/working")
+elif Path("/content/drive/MyDrive").exists():
+    OUT = Path(DRIVE_OUT)
+else:
+    OUT = Path("outputs")
+OUT.mkdir(parents=True, exist_ok=True)
 TRAIN_IMG, TRAIN_LBL, TEST_IMG = DATA / "train" / "images", DATA / "train" / "labels", DATA / "test" / "images"
 INTENTS = ["COUNT", "EXIST", "LIST", "LOCATION", "OUT_OF_SCOPE"]
 IMG_EXTS = {".png", ".jpg", ".jpeg", ".bmp"}
@@ -89,7 +116,7 @@ print(f"TensorFlow {tf.__version__} | GPU: {[g.name for g in gpus] or 'KHÔNG C�
 tf.keras.utils.set_random_seed(SEED)
 
 assert INPUT_W % 16 == 0 and INPUT_H % 16 == 0 and INPUT_W <= 320 and INPUT_H <= 240
-STRIDE = 8
+STRIDE = 4 if STRIDE4 else 8
 GRID_W, GRID_H = INPUT_W // STRIDE, INPUT_H // STRIDE
 CACHE_W = 640
 
@@ -256,9 +283,30 @@ def load_image(path):
     return img, (W0, H0)
 
 
-def load_samples(img_paths, label_dir, fmt=None, n_classes=None):
-    """Mỗi mẫu: dict(id, img, orig_size, boxes) với boxes = N x 5 [cls, x1, y1, x2, y2] chuẩn hóa 0..1."""
-    samples, bad = [], 0
+def load_teacher():
+    """{id: N x 6 [cls, x1, y1, x2, y2, score]} từ KD_FILE (tìm trong /kaggle/input, outputs/teacher, data)."""
+    for root in (Path("/kaggle/input"), Path("outputs") / "teacher", DATA, Path("/content/teacher"),
+                 Path("/content/drive/MyDrive")):
+        if root.exists():
+            hits = sorted(root.rglob(KD_FILE))
+            if hits:
+                raw = json.loads(hits[0].read_text(encoding="utf-8"))
+                out = {}
+                for k, v in raw.items():
+                    a = np.array([[c, x1, y1, x2, y2, s] for c, s, x1, y1, x2, y2 in v if s >= KD_MIN_SCORE],
+                                 dtype=np.float32).reshape(-1, 6)
+                    out[k] = a
+                n = sum(len(v) for v in out.values())
+                print(f"Nhãn mềm của thầy: {hits[0]} | {len(out)} ảnh, {n} box (score >= {KD_MIN_SCORE})")
+                return out
+    raise FileNotFoundError(f"KD_WEIGHT > 0 nhưng không tìm thấy {KD_FILE} (Add Input dataset chứa file này, "
+                            f"hoặc đặt KD_WEIGHT = 0)")
+
+
+def load_samples(img_paths, label_dir, fmt=None, n_classes=None, teacher=None):
+    """Mỗi mẫu: dict(id, img, orig_size, boxes) với boxes = N x 5 [cls, x1, y1, x2, y2] chuẩn hóa 0..1.
+    Có teacher: thêm tboxes = N x 6 [cls, x1, y1, x2, y2, score] (None nếu thầy không có ảnh này)."""
+    samples, bad, miss = [], 0, 0
     for p in img_paths:
         img, (W0, H0) = load_image(p)
         rows = []
@@ -269,9 +317,15 @@ def load_samples(img_paths, label_dir, fmt=None, n_classes=None):
                 else:
                     bad += 1
         boxes = np.clip(np.array(rows, dtype=np.float32).reshape(-1, 5), [0, 0, 0, 0, 0], [999, 1, 1, 1, 1])
-        samples.append({"id": p.stem, "img": img, "orig_size": (W0, H0), "boxes": boxes})
+        s = {"id": p.stem, "img": img, "orig_size": (W0, H0), "boxes": boxes}
+        if teacher is not None:
+            s["tboxes"] = teacher.get(p.stem)
+            miss += s["tboxes"] is None
+        samples.append(s)
     if bad:
         print(f"  CẢNH BÁO: bỏ {bad} dòng nhãn không hợp lệ")
+    if miss:
+        print(f"  {miss} ảnh không có nhãn mềm của thầy -> dùng heatmap nhãn thật làm đích distill")
     return samples
 
 
@@ -309,6 +363,20 @@ def augment(img, boxes, rng):
         img = np.repeat(img.mean(axis=2, keepdims=True), 3, axis=2)
     img = np.clip(img, 0, 255).astype(np.uint8)
     return np.ascontiguousarray(img), boxes
+
+
+def encode_teacher(tboxes, num_classes):
+    """Heatmap mềm của thầy: Gauss giống encode_targets nhưng đỉnh = score của thầy."""
+    T = np.zeros((GRID_H, GRID_W, num_classes), np.float32)
+    ys, xs = np.mgrid[0:GRID_H, 0:GRID_W]
+    for c, x1, y1, x2, y2, sc in tboxes:
+        w, h = (x2 - x1) * GRID_W, (y2 - y1) * GRID_H
+        cx, cy = (x1 + x2) / 2 * GRID_W, (y1 + y2) / 2 * GRID_H
+        ix, iy = min(int(cx), GRID_W - 1), min(int(cy), GRID_H - 1)
+        sx, sy = max(0.54 * w / 6, 0.4), max(0.54 * h / 6, 0.4)
+        g = sc * np.exp(-((xs - ix) ** 2) / (2 * sx * sx) - ((ys - iy) ** 2) / (2 * sy * sy))
+        T[:, :, int(c)] = np.maximum(T[:, :, int(c)], g)
+    return T
 
 
 def encode_targets(boxes, num_classes):
@@ -397,15 +465,25 @@ def _sep_conv(x, ch, name):
 
 
 def build_model(num_classes):
-    # Vòng loại: train từ đầu (weights=None)
     base = tf.keras.applications.MobileNetV2(input_shape=(INPUT_H, INPUT_W, 3), alpha=ALPHA,
                                              include_top=False, weights=None)
+    if PRETRAINED:
+        assert ALPHA in (0.35, 0.5, 0.75, 1.0), f"Không có trọng số ImageNet cho ALPHA {ALPHA}"
+        ref = tf.keras.applications.MobileNetV2(input_shape=(224, 224, 3), alpha=ALPHA,
+                                                include_top=False, weights="imagenet")
+        base.set_weights(ref.get_weights())
+        print(f"Backbone khởi tạo từ ImageNet (MobileNetV2 alpha {ALPHA})")
     c8 = base.get_layer("block_6_expand_relu").output
     c16 = base.get_layer("block_13_expand_relu").output
     p16 = _conv_bn_relu(c16, NECK_CH, name="lat16")
     p16 = ResizeNearest((INPUT_H // 8, INPUT_W // 8), name="up16")(p16)
     p8 = _conv_bn_relu(c8, NECK_CH, name="lat8")
     x = L.Add(name="fuse")([p8, p16])
+    if STRIDE4:
+        c4 = base.get_layer("block_3_expand_relu").output
+        x = _sep_conv(x, NECK_CH, "neck8")
+        x = ResizeNearest((INPUT_H // 4, INPUT_W // 4), name="up8")(x)
+        x = L.Add(name="fuse4")([_conv_bn_relu(c4, NECK_CH, name="lat4"), x])
     x = _sep_conv(x, NECK_CH, "neck1")
     x = _sep_conv(x, NECK_CH, "neck2")
     heat = L.Conv2D(num_classes, 1, activation="sigmoid", name="heatmap",
@@ -421,6 +499,24 @@ def focal_loss(y_true, y_pred):
     neg_loss = tf.math.log(1 - p) * tf.square(p) * tf.pow(1 - y_true, 4) * (1 - pos)
     n_pos = tf.maximum(tf.reduce_sum(pos, axis=[1, 2, 3]), 1.0)
     return -tf.reduce_sum(pos_loss + neg_loss, axis=[1, 2, 3]) / n_pos
+
+
+def make_heat_loss(num_classes):
+    """y_true = [heatmap nhãn thật (C kênh) | heatmap thầy (C kênh, chỉ khi KD_WEIGHT > 0)]."""
+    C = num_classes
+
+    def heat_loss(y_true, y_pred):
+        gt = y_true[..., :C]
+        loss = focal_loss(gt, y_pred)
+        if KD_WEIGHT > 0:
+            t = y_true[..., C:]
+            p = tf.clip_by_value(y_pred, 1e-4, 1 - 1e-4)
+            bce = -(t * tf.math.log(p) + (1 - t) * tf.math.log(1 - p))
+            n_pos = tf.maximum(tf.reduce_sum(tf.cast(tf.equal(gt, 1.0), tf.float32), axis=[1, 2, 3]), 1.0)
+            loss += KD_WEIGHT * tf.reduce_sum(tf.square(t - p) * bce, axis=[1, 2, 3]) / n_pos
+        return loss
+
+    return heat_loss
 
 
 def make_box_loss(num_classes, off_weight=1.0):
@@ -466,8 +562,17 @@ class DetDataset(tf.keras.utils.PyDataset):
         X, H, B = [], [], []
         for j in self.order[i * self.bs:(i + 1) * self.bs]:
             s = self.samples[j]
-            img, boxes = augment(s["img"], s["boxes"], rng) if do_aug else (s["img"], s["boxes"])
+            tb = s.get("tboxes", None) if KD_WEIGHT > 0 else None
+            if tb is not None:
+                # Gộp box thật (score = -1) với box thầy -> cùng một phép crop/flip cho cả hai
+                comb = np.concatenate([np.c_[s["boxes"], -np.ones(len(s["boxes"]), np.float32)], tb])
+                img, comb = augment(s["img"], comb, rng) if do_aug else (s["img"], comb)
+                boxes, tb = comb[comb[:, 5] < 0, :5], comb[comb[:, 5] >= 0]
+            else:
+                img, boxes = augment(s["img"], s["boxes"], rng) if do_aug else (s["img"], s["boxes"])
             h, b = encode_targets(boxes, self.C)
+            if KD_WEIGHT > 0:   # ảnh không có nhãn thầy -> đích distill = heatmap nhãn thật
+                h = np.concatenate([h, h if tb is None else encode_teacher(tb, self.C)], axis=-1)
             X.append(preprocess(img))
             H.append(h)
             B.append(b)
@@ -526,7 +631,7 @@ if QUICK_TEST:
     print("*** QUICK_TEST: 300 ảnh train, 100 ảnh val, 2 epoch - CHỈ để kiểm tra pipeline ***")
 print("\n===== DETECTOR =====\nĐang nạp ảnh...")
 t0 = time.time()
-train_s = load_samples(train_paths, TRAIN_LBL, LABEL_FORMAT, C)
+train_s = load_samples(train_paths, TRAIN_LBL, LABEL_FORMAT, C, teacher=load_teacher() if KD_WEIGHT > 0 else None)
 val_s = load_samples(val_paths, TRAIN_LBL, LABEL_FORMAT, C)
 _n_box = np.bincount(np.concatenate([s["boxes"][:, 0] for s in train_s]).astype(int), minlength=C)
 print("Số box train mỗi lớp:", dict(zip(classes, _n_box.tolist())))
@@ -587,16 +692,21 @@ if PATIENCE > 0:
 else:
     _lr = tf.keras.optimizers.schedules.CosineDecay(LR, steps, alpha=0.05)
 model.compile(optimizer=tf.keras.optimizers.Adam(_lr),
-              loss=[focal_loss, make_box_loss(C)],
+              loss=[make_heat_loss(C), make_box_loss(C)],
               # Tắt XLA: trên GPU Keras 3 tự bật XLA, mà XLA không có đạo hàm của resize nearest
               # (ResizeNearestNeighborGrad). Không ảnh hưởng mô hình hay file TFLite.
               jit_compile=False)
 ckpt = MapCheckpoint(str(OUT / "tiny_det_best.weights.h5"))
-t0 = time.time()
-model.fit(DetDataset(train_s, C, BATCH, seed=SEED, workers=WORKERS, use_multiprocessing=False, max_queue_size=16),
-          epochs=EPOCHS, verbose=0, callbacks=[ckpt])
-print(f"Train xong sau {(time.time() - t0) / 60:.1f} phút. Tốt nhất: epoch {ckpt.best_epoch}, val mAP50 {ckpt.best:.3f}")
-model.load_weights(ckpt.path)
+if RESUME_WEIGHTS:
+    assert Path(RESUME_WEIGHTS).exists(), f"Không thấy {RESUME_WEIGHTS} - đặt RESUME_WEIGHTS = \"\" để train lại"
+    print(f"BỎ QUA TRAIN - nạp checkpoint: {RESUME_WEIGHTS}")
+    model.load_weights(RESUME_WEIGHTS)
+else:
+    t0 = time.time()
+    model.fit(DetDataset(train_s, C, BATCH, seed=SEED, workers=WORKERS, use_multiprocessing=False, max_queue_size=16),
+              epochs=EPOCHS, verbose=0, callbacks=[ckpt])
+    print(f"Train xong sau {(time.time() - t0) / 60:.1f} phút. Tốt nhất: epoch {ckpt.best_epoch}, val mAP50 {ckpt.best:.3f}")
+    model.load_weights(ckpt.path)
 model.save(OUT / "tiny_det.keras")
 
 predict_float = lambda x: model.predict(x, batch_size=64, verbose=0)
