@@ -5,6 +5,7 @@
 /share/
 /etc/
 /pyvenv.cfg
+.venv/
 __pycache__/
 *.pyc
 
