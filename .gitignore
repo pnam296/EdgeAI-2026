@@ -29,3 +29,7 @@ det_predictions.json
 kaggle.json
 .env
 kaggle_runs/*/teacher_ds/teacher_soft.json
+
+#Đoạn mã md
+GEMINI.md
+.github
