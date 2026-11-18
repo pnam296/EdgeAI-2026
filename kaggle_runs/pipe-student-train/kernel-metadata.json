@@ -1,6 +1,6 @@
 {
   "id": "phngnam296/edgeai-pipe-student-train",
-  "title": "edgeai pipe-student train",
+  "title": "edgeai pipe-student-train",
   "code_file": "pipeline.ipynb",
   "language": "python",
   "kernel_type": "notebook",

@@ -1,6 +1,6 @@
 {
   "id": "phngnam296/edgeai-pipe-infer",
-  "title": "edgeai pipe infer",
+  "title": "edgeai pipe-infer",
   "code_file": "pipeline.ipynb",
   "language": "python",
   "kernel_type": "notebook",
