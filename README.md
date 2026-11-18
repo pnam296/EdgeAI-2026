@@ -1,401 +1,125 @@
-# Edge AI Challenge 2026 – Vòng loại
+# Edge AI Challenge 2026 Lần 2 – Vòng loại
 
-Detector vật thể tí hon và phân loại intent (TextCNN) cho cuộc thi
-[EDGE AI CHALLENGE 2026 LẦN 2 – Qualifiers](https://www.kaggle.com/competitions/egde-ai-challenge-2026-lan-2-qualifiers).
-Detector có hai nhánh: **YOLO11 P2/P3/P4 tự thiết kế** (`yolo_tiny.py`, PyTorch/Ultralytics, bài chính thức) và
-CenterNet + MobileNetV2 (`edgeai_float.py`, TensorFlow, nhánh cũ).
-Hạn nộp: **18/11/2026**.
-
-## Tình trạng hiện tại
+Bài dự thi [EDGE AI CHALLENGE 2026 LẦN 2 – Qualifiers](https://www.kaggle.com/competitions/egde-ai-challenge-2026-lan-2-qualifiers):
+phát hiện 7 loại đồ vật trên ảnh 320×240 và phân loại ý định câu hỏi (5 intent).
 
 | | |
 |---|---|
-| Điểm public tốt nhất | **99,021** (run `yolo-kd`: YOLO P2P4 191k tham số + distill từ thầy tự train, epoch 232, nộp 18/11/2026 01:22) -> **bài chính thức** |
-| Dự phòng | `yolo-student` (cùng kiến trúc, không distill) 98,932 · TF tốt nhất `final-ep400` 98,232 |
-| mAP50 val detection | 0,982 (`yolo-kd`, train/val split, hàm mAP của `edgeai_float.py`) · TF tốt nhất 0,972 (`lr3ep240`) |
-| Intent | accuracy 1,0 trên holdout, đã đạt tối đa (bài YOLO dùng lại intent của `final-ep400`) |
-| Mốc (cấu hình đang giữ) | `yolo_tiny.py` + `yolo_cfg/student_p2p4.yaml`: 320×240, 191.145 tham số, thầy `yolo_cfg/teacher_p2p4.yaml` |
-| Mục tiêu | ~~98 điểm~~ ✅ **ĐÃ ĐẠT** · ~~99 điểm~~ ✅ **ĐÃ ĐẠT** (99,021) |
-| Tổng giờ GPU | 99,1 giờ Kaggle T4 + Colab (nhánh TF) + khoảng 5,5 giờ RTX 5060 máy nhà (nhánh YOLO) |
-| Chưa làm | xuất TFLite INT8 / kiểm tra op TFLite Micro cho model YOLO (cần khi vào chung kết) |
+| **Bài nộp chính thức** | `submission_kd_ep232.csv`, **public 99,021** |
+| Detection | YOLO P2/P3/P4 tự thiết kế, **191.145 tham số**, train từ đầu, distill từ thầy cũng train từ đầu; mAP@0.5 val 0,982 |
+| Intent | TextCNN 18.213 tham số, accuracy 1,0 trên 20% câu train giữ lại |
+| Chạy lại / kiểm tra | **[`pipeline/`](pipeline/README.md)**: notebook chạy từ trên xuống, kèm trọng số đã nộp |
 
-**Công thức điểm** (đã khớp với điểm public): `điểm = 0,7 × mAP50 detection × 100 + 30 × accuracy intent`.
-Nhánh TF: mAP trên tập public thường thấp hơn mAP val khoảng 0,002. Nhánh YOLO thì ngược lại: public cao hơn val
-khoảng 0,004 (`yolo-kd`: val 0,982, public ≈ 0,986).
+## Kiểm tra nhanh cho BTC
+
+Mọi thứ cần để kiểm tra bài nộp nằm trong **`pipeline/`** ([hướng dẫn chi tiết](pipeline/README.md)):
+
+| Notebook | Detection | Bài nộp | mAP val |
+|---|---|---|---|
+| `pipeline/pipeline.ipynb` | trò + distill (**bài chính thức**) | 99,021 | 0,9819 |
+| `pipeline/pipeline_student.ipynb` | trò tự học, không distill | 98,932 | 0,9812 |
+
+- `MODE = "infer"` (mặc định): nạp trọng số đã nộp trong `pipeline/weights/`, dự đoán 4.000 ảnh test, ghép intent,
+  ghi `submission.csv`. Mất khoảng 3 phút trên Kaggle T4. Đã chạy thử trên Kaggle: mAP val đúng 0,9819, intent trùng
+  4.000/4.000 câu với bài đã nộp. Chạy trên máy dùng để train thì file ra giống hệt từng byte bài đã nộp.
+- `MODE = "train"`: train lại từ đầu. Đã chạy thử trên Kaggle T4 với `pipeline.ipynb`: mất 3,2 giờ, mAP val 0,9828.
+  Huấn luyện trên GPU không cho kết quả giống từng bit, nên mAP val dao động khoảng ±0,002 giữa các lần chạy.
+
+Trên Kaggle: Import Notebook -> Add Input cuộc thi -> bật Internet (để `pip install ultralytics==8.4.199`) -> đặt
+`REPO_URL` thành link repo này (hoặc thêm thư mục `pipeline/` làm Dataset) -> Run All. Kết quả ở
+`/kaggle/working/submission.csv`.
 
 ## Ràng buộc vòng loại
 
-| Hạng mục | Giới hạn | Mốc hiện tại |
+| Hạng mục | Giới hạn | Bài nộp |
 |---|---|---|
-| Đầu vào | ≤ 320×240 | 320×240 |
-| Số tham số detector | ≤ 200.000 | 191.145 (`yolo-kd`) |
-| Dung lượng model | ≤ 1,5 MB | khoảng 747 KB (191.145 × 4 byte float32) |
-| Lượng tử hóa INT8 | **không bắt buộc ở vòng loại** (thông báo BTC 11/11/2026) | dùng model float |
-| TTA (chạy model nhiều lần/ảnh, vd lật ngang) | **không được dùng** | 1 lần chạy/ảnh |
-| Pretrained / dữ liệu ngoài | **chỉ được dùng ở vòng chung kết** | train từ đầu (YOLO dựng từ yaml, `pretrained=False`; TF `PRETRAINED = False`) |
-| Ensemble nhiều model | **không được dùng** | nộp 1 model |
-| Distillation | được, nhưng thầy phải train từ đầu trên dữ liệu BTC | xem mục Kế hoạch |
+| Đầu vào | mỗi chiều ≤ 320×240 | 320×240, ảnh gốc đưa thẳng vào model |
+| Số tham số detector | ≤ 200.000 | 191.145 |
+| Dung lượng model | ≤ 1,5 MB | 747 KB (float32) |
+| Lượng tử INT8 | không bắt buộc ở vòng loại (BTC thông báo 11/11/2026) | model float |
+| Pretrained / dữ liệu ngoài | không | không dùng |
+| Ensemble / TTA | không | 1 model, 1 lần chạy mỗi ảnh |
 
-> Từ 11/11/2026, script mới **không** xuất TFLite hay INT8 nữa. Các run cũ trong `kaggle_runs/` và file
-> `edgeai_kaggle.py` vẫn còn phần INT8, chỉ giữ lại làm lịch sử.
+Notebook tự `assert` số tham số, dung lượng và kích thước đầu ra trước khi dự đoán.
 
-## Cấu trúc thư mục
+## Giải pháp
 
-```
-pipeline/                  ★ GÓI CHO BTC KIỂM TRA: pipeline.ipynb (infer = tạo lại đúng file đã nộp, train = train
-                             lại từ đầu), trọng số đã nộp, README theo thể lệ. Xem pipeline/README.md
-yolo_tiny.py               ★ BÀI CHÍNH THỨC: detector YOLO P2P4 (Ultralytics) train từ đầu trên máy có GPU,
-                             distill từ thầy tự train, ghép intent từ bài cũ -> submission.csv
-yolo_cfg/
-  student_p2p4.yaml        trò 191.145 tham số (đầu ra P2/4, P3/8, P4/16, bỏ P5, SCDown, reg_max 4)
-  teacher_p2p4.yaml        thầy 2,58 triệu tham số (KHÔNG nộp, chỉ để distill), cùng bố cục đầu ra
-outputs/yolo_tiny/<RUN>/   kết quả YOLO trên máy (KHÔNG có trên git): weights/, submission_*.csv
-edgeai_float.py            nhánh TF: train detector + intent + tạo submission.csv (float, 1 file)
-predict_float.py           dự đoán lại bằng model .keras đã train -> submission_float.csv (không cần GPU)
-requirements.txt           thư viện Python
-kaggle_runs/
-  results.csv              ★ bảng kết quả MỌI thí nghiệm (ghi thêm sau mỗi run)
-  state.json               danh sách thay đổi đã được giữ vào mốc
-  _tools.py                đọc log Kaggle -> ghi results.csv; đánh dấu run được giữ
-  _wait.ps1                chờ một kernel Kaggle chạy xong
-  <mã run>/                mỗi thí nghiệm 1 thư mục
-    edgeai_kaggle.py       script đúng như lúc chạy
-    kernel-metadata.json   cấu hình kernel Kaggle (id, GPU, dữ liệu cuộc thi)
-    output/*.log           log Kaggle (model và submission không đưa lên git)
-  A45-float/               bản mốc đã chỉnh để chạy trên Colab (Drive + chạy tiếp khi bị ngắt)
+**Detection.** Model đầu tiên của đội là CenterNet + MobileNetV2 (TensorFlow, 196k tham số). Sau khoảng 40 thí
+nghiệm, model này đạt tối đa mAP val 0,972 (public 98,232). Phân tích lỗi cho thấy một nửa số lỗi nằm ở vật nhỏ hơn
+24 px. Đội chuyển sang YOLO11 (Ultralytics) sửa lại cho vật nhỏ:
 
-edgeai_kaggle.py           script cũ (có INT8), là gốc của _tools.py prepare
-step1..step5_*.py, common.py, metrics.py, det_tiny_*.py, intent_text.py
-                           code chia nhỏ từ giai đoạn Warm-up, để tham khảo
-data/                      dữ liệu cuộc thi (KHÔNG có trên git, mỗi người tự tải)
-```
+- đầu ra **P2/4, P3/8, P4/16**, bỏ P5: lưới 80×60 + 40×30 + 20×15 = 6.300 anchor. Stride lớn nhất là 16 nên ảnh
+  320×240 không phải đệm;
+- **SCDown** (của YOLOv10) khi giảm kích thước để dồn tham số sang P2/P3; `reg_max` 4; bỏ attention C2PSA;
+- **distill** từ một thầy 2,58 triệu tham số cùng bố cục anchor, train từ đầu trên dữ liệu BTC: BCE theo xác suất lớp
+  của thầy và KL giữa phân bố DFL của thầy và trò, ở mọi anchor.
 
-## Cài đặt
+Kết quả: mAP val tăng từ 0,972 lên 0,982, toy_car tăng nhiều nhất (+0,026). Điểm public tăng từ 98,232 lên 99,021.
 
-```bash
-git clone https://github.com/pnam296/EdgeAI-2026.git
-cd EdgeAI-2026
-python -m venv .
-Scripts\activate                 # Windows;  macOS/Linux: source bin/activate
-pip install -r requirements.txt
-```
+**Intent.** Chuẩn hóa câu -> tách từ -> TextCNN (Embedding 32, Conv1D kernel 2/3/4, GlobalMaxPool, Dense 5). Lúc train
+sinh thêm câu bằng cách đổi tên vật (tên lấy từ `intent_train.csv`). Lúc dự đoán chỉ chạy TextCNN.
 
-**Dữ liệu** (phải tham gia cuộc thi trên Kaggle trước):
+Chi tiết kiến trúc, loss và cấu hình train: [`pipeline/README.md`](pipeline/README.md).
 
-```bash
-# cần file kaggle.json: Kaggle -> Settings -> API -> Create New Token
-kaggle competitions download -c egde-ai-challenge-2026-lan-2-qualifiers
-# giải nén vào data/  -> data/classes.txt, data/train/, data/test/, data/*.csv
-```
+## Lịch sử điểm public
 
-**Không commit** `data/`, model (`.keras`, `.h5`, `.tflite`, `.pt`), submission hay `kaggle.json`.
-Các file này đã có trong `.gitignore`.
-
-## Chạy một thí nghiệm
-
-Một run gồm train detector (khoảng 1 giờ 45 phút trên GPU T4), train intent (vài phút) và tạo `submission.csv`.
-Trên máy không có GPU thì chỉ nên chạy thử (`QUICK_TEST = True`).
-
-### 1. Tạo thư mục run
-
-```bash
-mkdir kaggle_runs/<mã>                    # vd: kaggle_runs/neck80
-cp edgeai_float.py kaggle_runs/<mã>/edgeai_kaggle.py
-```
-
-Sửa **đúng 1 thay đổi** trong phần `CẤU HÌNH` ở đầu file (vd `NECK_CH = 64` → `NECK_CH = 80`), để biết
-chắc thay đổi nào tạo ra kết quả. Các tùy chọn chính:
-
-| Biến | Ý nghĩa |
-|---|---|
-| `INPUT_W, INPUT_H` | kích thước đầu vào (≤ 320×240, chia hết cho 16) |
-| `ALPHA`, `NECK_CH` | độ rộng backbone MobileNetV2 / cổ mạng, quyết định số tham số (≤ 200k) |
-| `EPOCHS`, `BATCH`, `LR` | lịch train (cosine theo `EPOCHS`) |
-| `PATIENCE` | > 0 thì bật dừng sớm thay cho cosine |
-| `TRAIN_ON_ALL` | `True` thì gộp cả val vào train. Chỉ dùng cho **lần chạy chốt cuối**, vì khi đó mAP val mất ý nghĩa |
-| `QUICK_TEST` | `True` thì chạy 300 ảnh, 2 epoch để kiểm tra pipeline trong vài phút |
-
-### 2a. Chạy trên Kaggle (CLI)
-
-Sửa `kaggle_runs/<mã>/kernel-metadata.json`, chép từ một run có sẵn rồi đổi các trường:
-- `"id": "<username-kaggle-của-bạn>/edgeai-exp-<mã>"` và `"title": "edgeai exp <mã>"`
-- giữ `"enable_gpu": true`, `"machine_shape": "NvidiaTeslaT4"`, `"competition_sources": ["egde-ai-challenge-2026-lan-2-qualifiers"]`
-
-```bash
-kaggle kernels push -p kaggle_runs/<mã>
-kaggle kernels status <username>/edgeai-exp-<mã>
-# xong rồi thì tải log + kết quả về:
-kaggle kernels output <username>/edgeai-exp-<mã> -p kaggle_runs/<mã>/output
-```
-
-**Chạy bằng tài khoản của thành viên khác trong đội** (mỗi người có quota riêng; KHÔNG tạo nhiều tài khoản cho
-một người, vi phạm luật Kaggle, có thể bị loại):
-1. Người đó vào trang cuộc thi bấm **Join / I Understand and Accept**, rồi đăng nhập CLI bằng `kaggle.json` của mình.
-   Chạy hộ trên máy khác: người đó tạo token ở kaggle.com/settings -> API -> *Generate New Token*, lưu vào một file
-   NGOÀI repo (vd `~/.kaggle/access_token_ban`), rồi trong PowerShell:
-   `$env:KAGGLE_API_TOKEN = "$HOME\.kaggle\access_token_ban"; $env:KAGGLE_USER = "<username>"`
-   (chỉ có tác dụng trong cửa sổ đó; mở cửa sổ mới là về lại tài khoản mặc định).
-2. `python kaggle_runs/_tools.py whoami`: kiểm tra tài khoản đang dùng (lấy từ `KAGGLE_USER`, hoặc `~/.kaggle/kaggle.json`).
-3. `python kaggle_runs/_tools.py retarget <mã>`: đổi `id` trong `kernel-metadata.json` sang tài khoản đó. Run mới
-   tạo bằng `prepare` tự dùng đúng tài khoản. `_wait.ps1` cũng tự lấy theo.
-4. Nếu run cần `kernel_sources` (vd trọng số thầy) của tài khoản khác, lệnh `retarget` sẽ cảnh báo: chủ kernel đó
-   phải **Share** kernel cho người chạy, hoặc người chạy tự chạy lại kernel thầy trên tài khoản mình.
-
-Quota GPU Kaggle là **30 giờ mỗi tuần cho mỗi tài khoản**, mỗi run tốn khoảng 2 giờ. Cột `gio_gpu` trong
-`results.csv` ghi số giờ đã dùng, `python kaggle_runs/_tools.py gpu_hours` in ra tổng.
-
-### 2b. Chạy trên Colab
-
-Dùng `kaggle_runs/A45-float/edgeai_kaggle.py` làm gốc. File này đã hỗ trợ Drive.
-
-1. Runtime → Change runtime type → **T4 GPU**
-2. Mount Drive: `from google.colab import drive; drive.mount('/content/drive')`
-3. Chép dữ liệu vào `/content`, vì đọc ảnh trực tiếp từ Drive rất chậm: `!unzip -q /content/drive/MyDrive/data.zip -d /content/data`
-4. Dán toàn bộ script vào một ô code rồi chạy. Kết quả và checkpoint được ghi vào `MyDrive/edgeai_outputs/<tên>/` (sửa biến `DRIVE_OUT`).
-5. Nếu Colab bị ngắt giữa chừng: đặt `RESUME_WEIGHTS = ".../tiny_det_best.weights.h5"` rồi chạy lại. Script sẽ bỏ qua train và làm tiếp phần dự đoán và submission.
-
-Chạy xong, chép log (nội dung ô output) vào `kaggle_runs/<mã>/output/run.log` để lưu lại.
-
-### 3. Ghi kết quả
-
-```bash
-# log Kaggle trong kaggle_runs/<mã>/output/*.log -> thêm 1 dòng vào results.csv
-python kaggle_runs/_tools.py parse <mã> "<mô tả thay đổi>"
-# nếu run tốt hơn mốc thì đánh dấu giữ, rồi cập nhật edgeai_float.py theo thay đổi đó
-python kaggle_runs/_tools.py accept <mã>
-```
-
-Run chạy tay (Colab) mà `parse` không đọc được thì ghi bằng
-`python kaggle_runs/_tools.py manual <mã> "<mô tả>" map_float=0.957 ap_bottle=0.965 ...`.
-Luôn ghi kết luận vào cột `ghi_chu`: **GIỮ** hoặc **KHÔNG GIỮ**, kèm lý do.
-
-**Quy tắc giữ:** so mAP val của run với mốc. Chênh lệch dưới khoảng ±0,003 coi như nhiễu, không giữ,
-trừ khi lớp yếu nhất (toy_car, mouse) tăng rõ.
-
-### Nhánh YOLO (`yolo_tiny.py`, chạy trên máy có GPU)
-
-Cần PyTorch có CUDA và `ultralytics`. Trên Windows, TensorFlow chỉ chạy CPU, còn PyTorch dùng được GPU.
-Train lâu thì chạy trong cửa sổ PowerShell riêng và chỉ một run một lúc, vì máy ít RAM. Tham số dạng `KEY=VALUE`
-sẽ ghi đè cấu hình ở đầu file.
-
-```powershell
-.\Scripts\python.exe yolo_tiny.py PREP_ONLY=True                       # tạo dữ liệu kiểu Ultralytics (1 lần)
-.\Scripts\python.exe yolo_tiny.py RUN='teacher' MODEL_CFG='yolo_cfg/teacher_p2p4.yaml' TEACHER_MODE=True EPOCHS=200
-.\Scripts\python.exe yolo_tiny.py RUN='student' EPOCHS=300             # trò không distill (đối chứng)
-.\Scripts\python.exe yolo_tiny.py RUN='kd' TEACHER='outputs/yolo_tiny/teacher/weights/best.pt' EPOCHS=300
-```
-
-Kết quả nằm trong `outputs/yolo_tiny/<RUN>/`. mAP val được tính bằng đúng hàm của `edgeai_float.py` trên cùng tập
-val (seed 42), nên so trực tiếp được với nhánh TF. Phần INTENT lấy từ `REF_SUB`
-(`kaggle_runs/final-ep400/output/submission.csv`). Ghi kết quả vào `results.csv` với mã `yolo-<RUN>`, cột `gpu` ghi
-`local ...`, để trống `gio_gpu` (không tính vào quota Kaggle).
-
-### 4. Nộp bài
-
-```bash
-kaggle competitions submit egde-ai-challenge-2026-lan-2-qualifiers \
-  -f kaggle_runs/<mã>/output/submission.csv -m "<mã>: <mô tả>, val mAP50 0.xxx"
-kaggle competitions submissions egde-ai-challenge-2026-lan-2-qualifiers   # xem điểm
-```
-
-Mỗi ngày chỉ được nộp vài lần, nên **chỉ nộp khi mAP val vượt mốc**. Báo cho nhau trước khi nộp.
-
-Dự đoán lại bằng một model `.keras` có sẵn (vd thử TTA, đổi cách decode) mà không cần train:
-
-```bash
-python predict_float.py kaggle_runs/<mã>     # cần kaggle_runs/<mã>/output/tiny_det.keras + submission.csv
-```
-
-## Làm việc chung bằng git
-
-```bash
-git pull                                   # TRƯỚC khi bắt đầu làm
-# ... làm 1 thí nghiệm trong kaggle_runs/<mã>/ ...
-git add -A
-git commit -m "run <mã>: <thay đổi> -> val mAP 0.xxx (GIỮ/KHÔNG GIỮ)"
-git push
-```
-
-- **Mỗi người một thư mục run** và báo trước mình đang chạy thí nghiệm gì, để không tốn GPU chạy trùng.
-- `results.csv` và `edgeai_float.py` là file chung: `git pull` ngay trước khi sửa, sửa xong push luôn.
-- Nếu `git pull` báo xung đột ở `results.csv`: giữ **cả hai** dòng mới.
-
-## Nhật ký thí nghiệm (tóm tắt, chi tiết trong `kaggle_runs/results.csv`)
-
-| Run | Thay đổi | mAP val | Kết luận |
+| Ngày | Bài | mAP val | Public |
 |---|---|---|---|
-| 1b | đầu vào 160×128 → 320×240 | 0,918 (INT8 0,909) | giữ |
-| 1b-a35 | ALPHA 0.25 → 0.35 | 0,939 | giữ |
-| 3-a35-160 | 100 → 160 epoch | 0,954 (INT8 0,948) | giữ |
-| 2b | NECK_CH 64 → 96 | +0,001 | không giữ (nhiễu) |
-| 5 | augment scale 0.55 → 0.4 | −0,011 | không giữ |
-| 8 | vùng gán nhãn quanh tâm 0.54 → 0.4 | −0,001 | không giữ |
-| es | dừng sớm thay cosine | float 0,957, INT8 0,945 | không giữ (khi còn bắt buộc INT8) |
-| noaug | tắt augment 15 epoch cuối | 0,952 | không giữ (nhiễu) |
-| A45 | ALPHA 0.45 + EMA/GIoU/WH_SQRT/SPLIT_BOX | float 0,956, INT8 0,941 | không giữ |
-| A45-noaug | ALPHA 0.45 | float 0,9575 | giữ (mốc cũ) |
-| A45-float | ALPHA 0.45, không tắt augment (Colab) | float 0,960, public 97,2 | giữ |
-| kd | distill heatmap từ thầy YOLO11s (val 0,989–0,991) | 0,958 | không giữ (thấp hơn đối chứng A45-float 0,960) |
-| **s4** | **thêm tầng stride 4 (lưới 80x60), 196.307 tham số** | **float 0,966** | **giữ, mốc hiện tại: cả 7 lớp tăng, toy_car +0,011** |
-| pre35 | backbone ImageNet alpha 0.35 + stride 4, 138.611 tham số | float 0,967 | **không dùng ở vòng loại (cấm pretrained)**; ngang s4 với ít hơn 58k tham số -> để dành cho chung kết |
-| (thử trên máy) | TTA lật ngang trên A45-noaug | 0,9645 | **không dùng: thể lệ cấm TTA** |
-| bakd, tkd, tkd2 | distill từ thầy TF tự train (s4 / tbig 0,975) | 0,965–0,966 | không giữ (nhiễu) |
-| giou, boxw2, wh3, nb1, ema, mosaic | chỉnh loss box, EMA, mosaic | 0,964–0,967 | không giữ |
-| lr3 / ep240 | LR 3e-3 / 240 epoch | 0,970 / 0,971 | giữ |
-| **lr3ep240** | **LR 3e-3 + 240 epoch** | **0,972** | **giữ, mốc TF tốt nhất** |
-| final-ep300 / final-ep400 | lr3 + TRAIN_ON_ALL, 300 / 450 epoch | (giả) | public 98,217 / **98,232** (TF cao nhất) |
-| yolo-teacher | YOLO P2P4 2,58M tham số, thầy | 0,987 | không nộp, chỉ để distill |
-| yolo-student | YOLO P2P4 191k tham số, không distill | 0,981 | public 98,932 |
-| **yolo-kd** | **YOLO P2P4 191k + distill từ yolo-teacher** | **0,982** | **public 99,021, bài chính thức** |
+| 09/11 | CNN đầu tiên (TF) | | 86,378 |
+| 12/11 | `A45-float`: CenterNet + MobileNetV2 alpha 0.45 | 0,960 | 97,214 |
+| 14/11 | `final-s4`: thêm tầng stride 4 | (train cả 6.000 ảnh) | 97,781 |
+| 16/11 | `final-ep300`: LR 3e-3, 300 epoch | (train cả 6.000 ảnh) | 98,217 |
+| 17/11 | `final-ep400`: 450 epoch, bài TF tốt nhất | (train cả 6.000 ảnh) | 98,232 |
+| 18/11 | `yolo-student`: YOLO P2P4 không distill | 0,981 | 98,932 |
+| 18/11 | **`yolo-kd`: YOLO P2P4 + distill (bài chính thức)** | **0,982** | **99,021** |
+| 18/11 | `pipe-train`: chạy lại `yolo-kd` bằng notebook trên Kaggle | 0,983 | 98,937 |
 
-Kinh nghiệm rút ra:
-- **Đổi sang YOLO P2/P3/P4 là bước nhảy lớn nhất (+0,009 val so lr3ep240)**: một nửa số lỗi của model TF nằm ở
-  vật nhỏ < 24 px; đầu ra P2 (stride 4) cộng gán nhãn/loss của YOLO xử lý được. Bỏ P5 để stride lớn nhất là 16 ->
-  ảnh 320×240 đưa thẳng vào model, không phải đệm. toy_car tăng nhiều nhất (+0,026).
-- Distill YOLO chỉ thêm +0,0006 val (nhiễu), nhưng public cao hơn bản không distill 0,09 điểm.
-- Độ phân giải đầu vào và độ rộng backbone (ALPHA) là hai đòn bẩy lớn nhất.
-- Thay đổi augment, cách gán nhãn hay lịch học gần như không tác dụng.
-- Tắt augment ở cuối không giúp gì: epoch tốt nhất của A45-noaug là 135, trước lúc tắt augment.
-- Distill chỉ heatmap không giúp. AP@0.3 cao hơn AP@0.5 rõ ở toy_car/phone -> nút thắt là định vị box.
+Điểm = 0,7 × mAP@0.5 detection × 100 + 30 × accuracy intent.
 
-## Kế hoạch vòng loại (cập nhật 13/11/2026)
+## Cấu trúc repo
 
-> **18/11: kế hoạch dưới đây (nhánh TF) đã làm xong.** Bài chính thức hiện là `yolo-kd` (YOLO P2P4, 99,021), xem
-> mục Tình trạng hiện tại. Phần dưới giữ lại để tham khảo.
+```
+pipeline/                  ★ gói kiểm tra cho BTC: 2 notebook, trọng số đã nộp, cấu hình model (xem pipeline/README.md)
+yolo_tiny.py               script gốc đã train các model YOLO (yolo-teacher, yolo-student, yolo-kd) trên máy cá nhân
+yolo_cfg/                  cấu hình YOLO: student_p2p4.yaml (bài nộp), teacher_p2p4.yaml (thầy)
+kaggle_runs/
+  results.csv              ★ bảng kết quả của 46 thí nghiệm (mô tả cột ở dưới)
+  <mã run>/                mỗi thí nghiệm 1 thư mục: script đúng như lúc chạy (edgeai_kaggle.py hoặc pipeline.ipynb),
+                           kernel-metadata.json (cấu hình kernel Kaggle), output/*.log (log chạy)
+requirements.txt
+data/                      dữ liệu cuộc thi (không có trên git)
+```
 
-Cần thêm khoảng **+0,005 mAP** so với s4 (0,966 -> ~0,971) để lên 98 điểm.
+Model, file submission và trọng số của từng run không đưa lên git (nặng, tạo lại được). Trọng số của các bài đã nộp
+nằm trong `pipeline/weights/`.
 
-### Luật chơi vòng loại (đã chốt, KHÔNG làm)
+### `kaggle_runs/results.csv`
 
-| Cấm ở vòng loại | Hệ quả cho repo |
+Mỗi dòng là một thí nghiệm. mAP val tính trên cùng 1.200 ảnh val (tách 20% từ train, seed 42), cùng một hàm mAP@0.5.
+
+| Cột | Ý nghĩa |
 |---|---|
-| Pretrained / dữ liệu ngoài (chỉ được dùng ở chung kết) | `PRETRAINED = False`. Run `pre35` (0,967) và `kd` (thầy YOLO11s pretrained COCO) **không hợp lệ**, chỉ để tham khảo |
-| TTA (chạy model nhiều lần mỗi ảnh) | 1 lần chạy/ảnh |
-| Ensemble | nộp **1 model duy nhất**; không trộn dự đoán nhiều model, cũng không dùng ensemble làm thầy |
-| Dùng ảnh test để gán nhãn / pseudo-label / train | thầy chỉ chạy trên ảnh train |
+| `ma` | mã run, trùng tên thư mục trong `kaggle_runs/` (riêng `yolo-*` train trên máy, script là `yolo_tiny.py`) |
+| `thay_doi` | thay đổi so với mốc trước |
+| `tham_so` | số tham số detector |
+| `s_per_epoch`, `epoch_tot_nhat` | thời gian mỗi epoch (giây), epoch có mAP val tốt nhất |
+| `map_float`, `map_int8` | mAP@0.5 val của model float / INT8 (INT8 chỉ có ở các run đầu, trước khi BTC bỏ yêu cầu lượng tử) |
+| `ap_<lớp>` | AP@0.5 val từng lớp |
+| `tflite_kb`, `ops` | dung lượng TFLite và danh sách op (chỉ các run đầu) |
+| `rang_buoc_ok`, `submission_ok` | kiểm tra ràng buộc / file submission hợp lệ |
+| `gpu`, `gio_gpu` | phần cứng, số giờ GPU (Kaggle/Colab; run trên máy cá nhân để trống) |
+| `ghi_chu` | kết luận: GIỮ / KHÔNG GIỮ và lý do, điểm public nếu đã nộp |
 
-Distillation **được dùng**, nhưng thầy phải **train từ đầu trên dữ liệu BTC** (không mang kiến thức YOLO pretrained vào).
-Thầy chỉ dùng lúc train, không có trong bài nộp; code thầy nộp kèm để tái tạo được.
+Run có mAP val ghi là "GIẢ" là run train trên cả 6.000 ảnh (val nằm trong train), chỉ so được qua điểm public.
 
-Hướng đã loại: NECK_CH lớn hơn không còn chỗ (s4 đã 196.307 / 200.000 tham số); augment, gán nhãn, lịch học,
-tắt augment cuối đều đã thử, không tác dụng.
+## Khai báo theo thể lệ
 
-### Vì sao run kd cũ không giúp, và sẽ làm khác thế nào
-
-Run kd lấy **box cuối** của thầy rồi vẽ lại thành heatmap Gaussian -> gần như trùng nhãn thật, trò học thêm rất ít.
-Nút thắt hiện tại là **định vị box** (AP@0.3 cao hơn AP@0.5 rõ ở toy_car, phone), mà kd cũ không distill box.
-
-Cách mới (**distill dày, online**):
-- Thầy (đóng băng) chạy **song song** trên đúng batch đã augment của trò -> không cần file nhãn mềm, không lệch augment.
-- Loss thêm:
-  - `KD_HM`: trò bắt chước **heatmap thô của thầy trên mọi ô** lưới (cả chỗ thầy phân vân giữa các lớp).
-  - `KD_BOX`: L1 giữa box của trò và box của thầy, **có trọng số theo độ tự tin của thầy** (ô thầy chắc chắn có vật).
-  - (chỉ khi thầy cùng họ CenterNet lớn hơn) `KD_FEAT`: bắt chước feature neck qua 1 lớp 1x1 chuyển kênh.
-- Thầy và trò cùng kiến trúc CenterNet, cùng lưới 80x60 (stride 4) -> ghép từng ô trực tiếp, không phải giải mã box.
-
-### Các bước và mọi trường hợp
-
-Quy ước so sánh: **TB AP@0.5 của 7 lớp trên val** (seed 42, 20%) so với mốc **s4 = 0,9656**.
-Chênh **< 0,003 = nhiễu**. Mỗi run khoảng 2,3 giờ GPU (T4 x2 Kaggle).
-
-**Bước 1 – run `bakd`: tự distill (born-again), thầy = s4.**
-> Kết quả 13/11: **0,965** (TB 7 lớp 0,9654 vs s4 0,9656) = nhiễu -> KHÔNG GIỮ. Trò chỉ bằng thầy; book -0,009,
-> các lớp khác ±0,004. 2,69 giờ GPU. Theo tiêu chí còn 1 run phụ đổi trọng số.
-> Run phụ `bakd2` (KD_HM 0, KD_BOX 1.0): **0,965** (TB 0,9644, -0,001 = nhiễu, toy_car -0,009) -> KHÔNG GIỮ.
-> **Bỏ born-again**, sang Bước 2.
-> Cùng lúc: `s4-2g` = s4 chạy lại với `MULTI_GPU = True` (2 x T4): TB 0,9656 đúng bằng s4, train 112 phút thay
-> 134 phút -> **các run sau bật `MULTI_GPU = True`**.
-> (Trước đó: chạy trên Kaggle `kaggle_runs/bakd`, KD_HM 1.0, KD_BOX 0.5.) Code distill online đã có trong
-> `edgeai_float.py` (`KD_HM`, `KD_BOX`, `TEACHER_WEIGHTS`; mặc định 0 = tắt). Đã chạy thử trên máy: thầy nạp đúng,
-> không bị cập nhật khi train, trò cập nhật đủ.
-Trò = đúng kiến trúc s4, train lại từ đầu 160 epoch, thầy = trọng số `tiny_det_best.weights.h5` của kernel s4
-(thêm `kernel_sources: phngnam296/edgeai-exp-s4`). Không tốn công train thầy.
-- **≥ 0,969** (+0,003 trở lên): GIỮ, `bakd` thành mốc. Sang Bước 2 nếu còn ≥ 2 ngày, không thì sang Bước 3.
-- **0,963 – 0,969** (nhiễu): chạy thêm **1 lần** đổi trọng số (`KD_BOX` x2, hoặc chỉ `KD_BOX` không `KD_HM`) để xem
-  thành phần nào có tác dụng. Vẫn nhiễu -> bỏ born-again, sang Bước 2.
-- **< 0,963** (tệ hơn): kiểm tra loss KD có lấn loss gốc không (log từng thành phần), giảm trọng số KD 1 lần;
-  vẫn tệ -> sang Bước 2.
-- Lỗi khi chạy (không nạp được thầy, lệch shape): sửa và chạy lại, không tính là kết quả.
-
-**Bước 2 – thầy lớn train từ đầu (`tbig`) rồi distill (`tkd`).**
-> Kết quả 13/11: `tbig` (ALPHA 0.75, NECK_CH 96, 474,6k tham số) = **0,975** (TB 7 lớp 0,9754, +0,010 so s4, mọi lớp
-> tăng) -> đạt ngưỡng, **chạy `tkd`** với `TEACHER_ALPHA, TEACHER_NECK = 0.75, 96`. 3,41 giờ GPU (tài khoản dohuuminhtri).
-> Kết quả 14/11 (thầy = `kernel_sources: dohuuminhtri/edgeai-exp-tbig`, trò s4, MULTI_GPU):
-> `tkd` (KD_HM 1.0, KD_BOX 0.5) = TB 0,9650; `tkd2` (KD_HM 2.0, KD_BOX 1.0) = TB 0,9654. Cả hai = nhiễu so s4 0,9656
-> -> **KHÔNG GIỮ, bỏ distill**. Thầy hơn 0,010 nhưng không truyền được qua heatmap/box. Sang Bước 3 với s4.
-- `tbig`: cùng code, **bỏ trần tham số**: ALPHA 1.0, NECK_CH 128, STRIDE4, train trên 4.800 ảnh train
-  (không val, không test). Ghi mAP val của thầy vào `results.csv`.
-  - Thầy **≥ 0,975**: đủ mạnh -> chạy `tkd` (trò s4 + KD_HM + KD_BOX + KD_FEAT).
-  - Thầy **< 0,975** (không hơn s4 rõ): distill khó giúp -> bỏ, sang Bước 3 với mốc tốt nhất hiện có.
-  - Có thể chạy `tbig` trên Colab **song song** với `bakd` trên Kaggle để tiết kiệm thời gian.
-- `tkd`: cùng tiêu chí giữ / nhiễu / tệ như Bước 1 (so với mốc hiện tại, có thể là `bakd`).
-
-**Bước 3 – run chốt `final`: mốc tốt nhất + `TRAIN_ON_ALL = True`** (train trên cả 6.000 ảnh, dự kiến +0,003 đến +0,008).
-- Không còn val để đo -> số epoch cố định bằng epoch tốt nhất của mốc (không chọn theo val).
-- Nếu mốc có KD: dùng thầy đã train trên 4.800 ảnh (hoặc train lại thầy trên 6.000 ảnh nếu còn thời gian).
-- Kiểm tra bắt buộc: đủ 4.000 ảnh test, ràng buộc OK, `submission.csv` hợp lệ.
-
-**Bước 4 – nộp.**
-> 14/11: đã nộp `final-s4` (s4 + TRAIN_ON_ALL, `kaggle_runs/final-s4`) -> **public 97,781** -> chọn làm bài chính thức.
-> Từ giờ nộp luôn ghi mô tả (`-m "<mã run>"`) để biết bài nào là run nào.
-> 16–17/11: `final-ep300` 98,217, `final-cw` 98,068, `final-ep400` (450 epoch) **98,232** = cao nhất nhánh TF.
-> 18/11: chuyển sang YOLO. `yolo-kd` (`outputs/yolo_tiny/kd/submission_kd_ep232.csv`, trọng số `last.pt` epoch 232)
-> đạt **public 99,021**, `yolo-student` đạt 98,932 -> **chọn `yolo-kd` làm bài chính thức**.
-- Nộp `final`. Nếu điểm public **thấp hơn** bản đang có (97,2 của A45-float) -> chọn lại bản cũ làm bài chính thức.
-- Luôn giữ 1 bản dự phòng đã nộp được (`s4` hoặc `A45-float`).
-- Không có gì cải thiện ở Bước 1–2 -> nộp **s4 + TRAIN_ON_ALL**.
-
-### Lịch dự kiến
-
-| Ngày | Việc |
-|---|---|
-| 13–14/11 | viết code distill online; chạy `bakd` (Kaggle) + `tbig` (Colab) song song |
-| 15/11 | đọc kết quả; chạy run phụ của Bước 1 hoặc `tkd` |
-| 16/11 | chạy `final` (TRAIN_ON_ALL) |
-| 17/11 | nộp, kiểm tra điểm public, chọn bài chính thức |
-| 18/11 | hạn chót – chỉ để dự phòng, không chạy thí nghiệm mới |
-
-### Việc cho người thứ hai (làm song song với `bakd`)
-
-**Việc 1 – chạy model thầy `tbig` (Bước 2), quan trọng nhất.**
-File sẵn: `kaggle_runs/tbig/edgeai_kaggle.py` (= `edgeai_float.py` với ALPHA 0.75, NECK_CH 96, 474.579 tham số,
-tắt intent). Vượt trần 200k là **cố ý** vì thầy không nộp; dòng `[LỖI] Số tham số` ở cuối log là bình thường.
-
-Nên chạy bằng **tài khoản Kaggle của bạn** (30 giờ GPU/tuần riêng, không bị ngắt như Colab):
-1. Vào trang cuộc thi, bấm Join (đồng ý luật) nếu chưa.
-2. Code → New Notebook → File → Import / dán toàn bộ `kaggle_runs/tbig/edgeai_kaggle.py` vào 1 ô.
-3. Add Input → Competition `egde-ai-challenge-2026-lan-2-qualifiers`.
-4. Settings: Accelerator **GPU T4 x2**, Internet **tắt** (không cần).
-5. **Save Version → Save & Run All (Commit)** rồi có thể tắt máy; chạy xong xem tab Output.
-6. Xem log: dòng `epoch ...: ... | XXs/epoch`. Ước tính 2–2,5 lần s4 (~50 s/epoch) -> khoảng 4–5,5 giờ cho 160 epoch.
-
-Colab cũng được (xem mục 2b), nhưng Colab miễn phí hay ngắt; `RESUME_WEIGHTS` chỉ nạp checkpoint tốt nhất,
-**không train tiếp**, nên thầy có thể bị train thiếu.
-
-Chạy xong, gửi lại:
-- `tiny_det_float.weights.h5` (trọng số thầy) -> `git add -f kaggle_runs/tbig/output/tiny_det_float.weights.h5`
-  rồi push (file bị `.gitignore` chặn nên phải `-f`), hoặc gửi trực tiếp.
-- Log -> `kaggle_runs/tbig/output/` rồi `python kaggle_runs/_tools.py parse tbig "Thầy ALPHA 0.75, NECK_CH 96"`.
-- Quyết định theo Bước 2: thầy **≥ 0,975** mới dùng để distill (`tkd`).
-
-**Việc 2 – hỏi BTC cho chắc** (trên Discussion của cuộc thi hoặc kênh BTC):
-- Distill từ model thầy **tự train từ đầu trên dữ liệu BTC** (thầy lớn hơn 200k tham số, không nộp) có hợp lệ ở vòng loại không?
-- Câu "pretrained ... (chỉ ở VÒNG CHUNG KẾT)" là *chỉ được dùng* ở chung kết, hay *chỉ phải khai báo* ở chung kết?
-- Câu trả lời ảnh hưởng trực tiếp tới `bakd`/`tkd` và `pre35`; ghi kết quả vào mục "Luật chơi vòng loại".
-
-**Việc 3 – đọc kết quả và soát lại.**
-- Khi `bakd` xong (log trong `kaggle_runs/bakd/output/`), so theo tiêu chí Bước 1 và ghi GIỮ / KHÔNG GIỮ vào `results.csv`.
-- Đọc lại phần distill online trong `edgeai_float.py` (`make_kd_heat_loss`, `make_kd_box_loss`, đoạn `USE_KD`) xem có chỗ nào sai.
-
-Quy ước chung: mọi run mới ghi vào `kaggle_runs/results.csv` kèm ghi chú GIỮ / KHÔNG GIỮ và lý do; pull trước khi sửa.
-
-## Cần khai báo với BTC (vòng chung kết)
-
-Vòng loại: bài nộp không dùng pretrained, dữ liệu ngoài hay ensemble. Danh sách dưới chỉ áp dụng nếu dùng lại các run `pre35` / `kd` ở chung kết.
-
-- Trọng số pretrained MobileNetV2 (ImageNet, Keras Applications), dùng trong detector.
-- Trọng số pretrained YOLO11n (COCO): chỉ dùng tham khảo, không có trong bài nộp.
-- Trọng số pretrained YOLO11s (COCO, Ultralytics): khởi tạo model thầy (`teacher_yolo.py`), chỉ train trên
-  tập train, sinh nhãn mềm `teacher_soft.json` để chưng cất khi train. Không có trong bài nộp.
-  Hồ sơ nộp cần kèm `teacher_yolo.py` + `teacher_soft.json` (seed 42, 2 fold) để tái tạo được.
-- Dữ liệu intent sinh thêm bằng cách thay tên vật thể trong câu train.
+- **Bài nộp chính thức** không dùng pretrained, dữ liệu ngoài, ensemble hay TTA. Thầy dùng để distill được train từ
+  đầu trên dữ liệu BTC và chỉ dùng lúc train.
+- **Một số thí nghiệm cũ** trong `kaggle_runs/` (không nộp làm bài chính thức) có thử pretrained: `pre35` (backbone
+  MobileNetV2 ImageNet) và `kd` (distill từ YOLO11s). Hai hướng này bị bỏ khi đội biết thể lệ chỉ cho dùng pretrained
+  ở vòng chung kết. Kết quả vẫn giữ trong `results.csv` để minh bạch.
+- **Mã nguồn có ảnh hưởng:** [Ultralytics](https://github.com/ultralytics/ultralytics) 8.4.199 (AGPL-3.0) cho các khối
+  YOLO11/YOLOv10, loss và vòng lặp train. Kiến trúc P2P4, loss distill, hàm dự đoán, hàm mAP và TextCNN do đội tự viết.
+- **Môi trường:** các model YOLO đã nộp được train trên máy cá nhân (RTX 5060 Laptop). Các thí nghiệm TF (và TextCNN của
+  bài nộp) được train trên Kaggle T4 hoặc Colab. Notebook trong `pipeline/` đã chạy lại được trên Kaggle T4.
