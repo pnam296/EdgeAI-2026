@@ -56,13 +56,15 @@ Chọn chế độ ở ô **Cấu hình**:
 | `"train"` | Train lại từ đầu -> TextCNN -> `submission.csv`. `pipeline.ipynb`: thầy 200 epoch -> trò distill 300 epoch. `pipeline_student.ipynb`: trò dừng ở epoch 290/300 như bài nộp | `pipeline.ipynb` trên Kaggle T4: thầy 94 phút + trò khoảng 125 phút, tổng khoảng 3,7 giờ |
 
 `QUICK_TEST = True` chạy thử toàn bộ chế độ `train` với 200 ảnh, 2 epoch, xong trong vài phút.
+`TEACHER_W = "weights/yolo_teacher.pt"` (chỉ ở `pipeline.ipynb`): bỏ bước train thầy, distill từ đúng thầy của bài nộp.
+Chế độ `train` khi đó còn khoảng 2,2 giờ trên T4.
 
 ### Kaggle
 
 1. **New Notebook** -> File -> **Import Notebook** -> chọn `pipeline.ipynb`.
 2. **Add Input** -> Competition `egde-ai-challenge-2026-lan-2-qualifiers`.
 3. Lấy `weights/` và `yolo_cfg/`, chọn một trong hai cách:
-   - Bật **Internet**, đặt `REPO_URL = "<link git của repo này>"` ở ô Cấu hình. Notebook sẽ tự clone.
+   - Bật **Internet**. `REPO_URL` đã điền sẵn link repo này, notebook tự clone (vào `/tmp`).
    - Hoặc tải thư mục này lên làm Kaggle Dataset rồi **Add Input**. Notebook tự tìm trong `/kaggle/input`.
 4. Accelerator **GPU T4**, Internet bật nếu môi trường chưa có `ultralytics` (notebook tự `pip install ultralytics==8.4.199`).
 5. **Run All**. Kết quả nằm ở `/kaggle/working/submission.csv`. Trọng số và log train nằm ở `/kaggle/working/out/`.

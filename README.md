@@ -26,8 +26,8 @@ Mọi thứ cần để kiểm tra bài nộp nằm trong **`pipeline/`** ([hư�
   thử trên Kaggle với trò dừng ở epoch 232: mất 3,2 giờ, mAP val 0,9828.
   Huấn luyện trên GPU không cho kết quả giống từng bit, nên mAP val dao động khoảng ±0,002 giữa các lần chạy.
 
-Trên Kaggle: Import Notebook -> Add Input cuộc thi -> bật Internet (để `pip install ultralytics==8.4.199`) -> đặt
-`REPO_URL` thành link repo này (hoặc thêm thư mục `pipeline/` làm Dataset) -> Run All. Kết quả ở
+Trên Kaggle: Import Notebook -> Add Input cuộc thi -> bật Internet (để `pip install ultralytics==8.4.199` và tự clone
+repo này lấy trọng số, `REPO_URL` đã điền sẵn) -> Run All. Kết quả ở
 `/kaggle/working/submission.csv`.
 
 ## Ràng buộc vòng loại
