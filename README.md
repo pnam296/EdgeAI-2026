@@ -42,6 +42,8 @@ khoảng 0,004 (`yolo-kd`: val 0,982, public ≈ 0,986).
 ## Cấu trúc thư mục
 
 ```
+pipeline/                  ★ GÓI CHO BTC KIỂM TRA: pipeline.ipynb (infer = tạo lại đúng file đã nộp, train = train
+                             lại từ đầu), trọng số đã nộp, README theo thể lệ. Xem pipeline/README.md
 yolo_tiny.py               ★ BÀI CHÍNH THỨC: detector YOLO P2P4 (Ultralytics) train từ đầu trên máy có GPU,
                              distill từ thầy tự train, ghép intent từ bài cũ -> submission.csv
 yolo_cfg/

@@ -31,3 +31,7 @@ kaggle_runs/*/teacher_ds/teacher_soft.json
 
 # File tải về tạm (submission thô từ Kaggle)
 /scratch_sub/
+
+# Gói nộp cho BTC: trọng số đã nộp (nhỏ, cần để tái lập)
+!pipeline/weights/*.pt
+!pipeline/weights/*.keras
