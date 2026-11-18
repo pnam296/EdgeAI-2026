@@ -6,10 +6,10 @@ Phát hiện đồ vật (**YOLO P2/P3/P4 tự thiết kế, 191.145 tham số, 
 
 | | |
 |---|---|
-| Bài nộp chính thức | **public 99,021** (`submission_kd_ep232.csv`, nộp 18/11/2026) |
-| Detection | mAP@0.5 val **0,9819** (1.200 ảnh tách từ train), model float, 1 lần chạy/ảnh |
+| Bài nộp chính thức | **public 99,061** (bài `yolo-kd300`, nộp 18/11/2026 21:01) |
+| Detection | mAP@0.5 val **0,9827** (1.200 ảnh tách từ train), model float, 1 lần chạy/ảnh |
 | Intent | accuracy 1,0 trên 20% câu train giữ lại |
-| Tái lập | `MODE = "infer"` trên máy đã train: file **giống hệt từng byte** bài đã nộp (MD5 `4d21be92a28705e98c736b85f671517d`). Trên Kaggle T4: cùng mAP val 0,9819, intent trùng 4.000/4.000, score box chỉ lệch ở số lẻ do khác GPU |
+| Tái lập | `MODE = "infer"` trên máy đã train: file **giống hệt từng byte** bài đã nộp (MD5 `51d749f17ee8f0429bec1ddc65e98b1e`). Trên Kaggle T4: cùng mAP val, intent trùng 4.000/4.000, score box chỉ lệch ở số lẻ do khác GPU |
 
 ```
 ảnh 320×240 RGB ──► YOLO P2P4 (191k tham số) ──► 6.300 anchor × (4 box + 7 lớp) ──► NMS 0,7 ──► ≤ 100 box
@@ -45,7 +45,7 @@ Có 2 notebook, cùng cấu trúc, chạy từ trên xuống:
 
 | Notebook | Detection | Bài nộp | mAP val |
 |---|---|---|---|
-| `pipeline.ipynb` | trò + distill từ thầy (bài chính thức) | 99,021 | 0,9819 |
+| `pipeline.ipynb` | trò + distill từ thầy (bài chính thức) | 99,061 | 0,9827 |
 | `pipeline_student.ipynb` | trò tự học, không thầy, không distill | 98,932 | 0,9812 |
 
 Chọn chế độ ở ô **Cấu hình**:
@@ -53,7 +53,7 @@ Chọn chế độ ở ô **Cấu hình**:
 | `MODE` | Làm gì | Thời gian |
 |---|---|---|
 | `"infer"` (mặc định) | Nạp trọng số đã nộp trong `weights/`, chấm mAP val, dự đoán 4.000 ảnh test, ghép intent -> `submission.csv` | khoảng 2 phút có GPU |
-| `"train"` | Train lại từ đầu -> TextCNN -> `submission.csv`. `pipeline.ipynb`: thầy 200 epoch -> trò distill (dừng ở epoch 232/300 như bài nộp). `pipeline_student.ipynb`: trò dừng ở epoch 290/300 như bài nộp | `pipeline.ipynb` đo trên Kaggle T4: 3,2 giờ (thầy 94 phút, trò 96 phút), mAP val 0,9828 |
+| `"train"` | Train lại từ đầu -> TextCNN -> `submission.csv`. `pipeline.ipynb`: thầy 200 epoch -> trò distill 300 epoch. `pipeline_student.ipynb`: trò dừng ở epoch 290/300 như bài nộp | `pipeline.ipynb` trên Kaggle T4: thầy 94 phút + trò khoảng 125 phút, tổng khoảng 3,7 giờ |
 
 `QUICK_TEST = True` chạy thử toàn bộ chế độ `train` với 200 ảnh, 2 epoch, xong trong vài phút.
 
@@ -122,8 +122,8 @@ Cả hai chia cho tổng độ tự tin của thầy, hệ số `KD_CLS = KD_BOX
 
 Train: batch 64, ảnh 320, lịch 300 epoch mặc định của Ultralytics (`optimizer=auto` -> MuSGD lr 0,01, augment mặc
 định có mosaic, tắt mosaic 10 epoch cuối).
-Bài nộp là checkpoint `last.pt` ở **epoch 232**: lần chạy đó bị dừng ở epoch 232 vì máy hết RAM. `STOP_EPOCH = 232`
-tái lập đúng điểm dừng này, đặt `STOP_EPOCH = 0` để chạy đủ 300 epoch.
+Bài nộp chạy **đủ 300 epoch** (`best.pt` = `last.pt`). Bản nộp trước đó (99,021) là cùng cấu hình nhưng dừng ở epoch
+232 vì máy hết RAM; đặt `STOP_EPOCH = 232` để tái lập lần chạy đó.
 
 ### Intent: TextCNN (Keras, 18.213 tham số)
 
@@ -142,7 +142,8 @@ mAP@0.5 trên 1.200 ảnh val (`SPLIT_SEED = 42`), cùng một hàm tính:
 |---|---|---|---|---|---|---|---|---|---|---|
 | Thầy (không nộp) | 2.580.073 | 0,990 | 0,990 | 0,985 | 0,982 | 0,985 | 0,990 | 0,986 | 0,987 | |
 | Trò không distill, epoch 290 | 191.145 | 0,989 | 0,989 | 0,973 | 0,972 | 0,976 | 0,989 | 0,980 | 0,981 | 98,932 |
-| **Trò + distill, epoch 232 (bài nộp)** | **191.145** | 0,987 | 0,989 | 0,975 | 0,972 | 0,978 | 0,989 | 0,983 | **0,982** | **99,021** |
+| Trò + distill, dừng ở epoch 232 | 191.145 | 0,987 | 0,989 | 0,975 | 0,972 | 0,978 | 0,989 | 0,983 | 0,982 | 99,021 |
+| **Trò + distill, đủ 300 epoch (bài nộp)** | **191.145** | 0,989 | 0,989 | 0,975 | 0,976 | 0,978 | 0,989 | 0,983 | **0,983** | **99,061** |
 | Model TF cũ của đội (CenterNet + MobileNetV2, run `lr3ep240`) | 196.307 | 0,981 | 0,986 | 0,966 | 0,962 | 0,967 | 0,989 | 0,954 | 0,972 | 98,232* |
 
 \* điểm public của bài TF tốt nhất (cùng kiến trúc, train trên cả 6.000 ảnh, 450 epoch), không phải của đúng run `lr3ep240`.
@@ -172,7 +173,7 @@ yolo_cfg/
   student_p2p4.yaml         trò, 191.145 tham số (bài nộp)
   teacher_p2p4.yaml         thầy, 2.580.073 tham số (chỉ để distill)
 weights/
-  yolo_kd_student.pt        trọng số trò đã nộp (checkpoint epoch 232, đã bỏ optimizer)
+  yolo_kd_student.pt        trọng số trò đã nộp (distill đủ 300 epoch, đã bỏ optimizer)
   yolo_teacher.pt           trọng số thầy (dùng khi muốn distill lại mà không train thầy)
   yolo_student.pt           trọng số trò tự học đã nộp (checkpoint epoch 290, đã bỏ optimizer)
   intent_textcnn.keras      TextCNN đã nộp

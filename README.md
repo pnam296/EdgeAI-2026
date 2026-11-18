@@ -5,7 +5,7 @@ phát hiện 7 loại đồ vật trên ảnh 320×240 và phân loại ý đị
 
 | | |
 |---|---|
-| **Bài nộp chính thức** | `submission_kd_ep232.csv`, **public 99,021** |
+| **Bài nộp chính thức** | bài `yolo-kd300` (nộp 18/11/2026 21:01), **public 99,061** |
 | Detection | YOLO P2/P3/P4 tự thiết kế, **191.145 tham số**, train từ đầu, distill từ thầy cũng train từ đầu; mAP@0.5 val 0,982 |
 | Intent | TextCNN 18.213 tham số, accuracy 1,0 trên 20% câu train giữ lại |
 | Chạy lại / kiểm tra | **[`pipeline/`](pipeline/README.md)**: notebook chạy từ trên xuống, kèm trọng số đã nộp |
@@ -16,13 +16,14 @@ Mọi thứ cần để kiểm tra bài nộp nằm trong **`pipeline/`** ([hư�
 
 | Notebook | Detection | Bài nộp | mAP val |
 |---|---|---|---|
-| `pipeline/pipeline.ipynb` | trò + distill (**bài chính thức**) | 99,021 | 0,9819 |
+| `pipeline/pipeline.ipynb` | trò + distill (**bài chính thức**) | 99,061 | 0,9827 |
 | `pipeline/pipeline_student.ipynb` | trò tự học, không distill | 98,932 | 0,9812 |
 
 - `MODE = "infer"` (mặc định): nạp trọng số đã nộp trong `pipeline/weights/`, dự đoán 4.000 ảnh test, ghép intent,
-  ghi `submission.csv`. Mất khoảng 3 phút trên Kaggle T4. Đã chạy thử trên Kaggle: mAP val đúng 0,9819, intent trùng
-  4.000/4.000 câu với bài đã nộp. Chạy trên máy dùng để train thì file ra giống hệt từng byte bài đã nộp.
-- `MODE = "train"`: train lại từ đầu. Đã chạy thử trên Kaggle T4 với `pipeline.ipynb`: mất 3,2 giờ, mAP val 0,9828.
+  ghi `submission.csv`. Mất khoảng 3 phút trên Kaggle T4. Chạy trên máy dùng để train thì file ra giống hệt từng byte
+  bài đã nộp. Trên Kaggle T4: cùng mAP val, intent trùng 4.000/4.000 câu, score box chỉ lệch ở chữ số cuối do khác GPU.
+- `MODE = "train"`: train lại từ đầu (thầy 200 epoch, trò distill 300 epoch, ước tính 3,7 giờ trên Kaggle T4). Đã chạy
+  thử trên Kaggle với trò dừng ở epoch 232: mất 3,2 giờ, mAP val 0,9828.
   Huấn luyện trên GPU không cho kết quả giống từng bit, nên mAP val dao động khoảng ±0,002 giữa các lần chạy.
 
 Trên Kaggle: Import Notebook -> Add Input cuộc thi -> bật Internet (để `pip install ultralytics==8.4.199`) -> đặt
@@ -54,7 +55,7 @@ nghiệm, model này đạt tối đa mAP val 0,972 (public 98,232). Phân tích
 - **distill** từ một thầy 2,58 triệu tham số cùng bố cục anchor, train từ đầu trên dữ liệu BTC: BCE theo xác suất lớp
   của thầy và KL giữa phân bố DFL của thầy và trò, ở mọi anchor.
 
-Kết quả: mAP val tăng từ 0,972 lên 0,982, toy_car tăng nhiều nhất (+0,026). Điểm public tăng từ 98,232 lên 99,021.
+Kết quả: mAP val tăng từ 0,972 lên 0,983, toy_car tăng nhiều nhất (+0,029). Điểm public tăng từ 98,232 lên 99,061.
 
 **Intent.** Chuẩn hóa câu -> tách từ -> TextCNN (Embedding 32, Conv1D kernel 2/3/4, GlobalMaxPool, Dense 5). Lúc train
 sinh thêm câu bằng cách đổi tên vật (tên lấy từ `intent_train.csv`). Lúc dự đoán chỉ chạy TextCNN.
@@ -71,8 +72,9 @@ Chi tiết kiến trúc, loss và cấu hình train: [`pipeline/README.md`](pipe
 | 16/11 | `final-ep300`: LR 3e-3, 300 epoch | (train cả 6.000 ảnh) | 98,217 |
 | 17/11 | `final-ep400`: 450 epoch, bài TF tốt nhất | (train cả 6.000 ảnh) | 98,232 |
 | 18/11 | `yolo-student`: YOLO P2P4 không distill | 0,981 | 98,932 |
-| 18/11 | **`yolo-kd`: YOLO P2P4 + distill (bài chính thức)** | **0,982** | **99,021** |
+| 18/11 | `yolo-kd`: YOLO P2P4 + distill, dừng ở epoch 232 (máy hết RAM) | 0,982 | 99,021 |
 | 18/11 | `pipe-train`: chạy lại `yolo-kd` bằng notebook trên Kaggle | 0,983 | 98,937 |
+| 18/11 | **`yolo-kd300`: YOLO P2P4 + distill đủ 300 epoch (bài chính thức)** | **0,983** | **99,061** |
 
 Điểm = 0,7 × mAP@0.5 detection × 100 + 30 × accuracy intent.
 
@@ -80,10 +82,10 @@ Chi tiết kiến trúc, loss và cấu hình train: [`pipeline/README.md`](pipe
 
 ```
 pipeline/                  ★ gói kiểm tra cho BTC: 2 notebook, trọng số đã nộp, cấu hình model (xem pipeline/README.md)
-yolo_tiny.py               script gốc đã train các model YOLO (yolo-teacher, yolo-student, yolo-kd) trên máy cá nhân
+yolo_tiny.py               script gốc đã train các model YOLO (yolo-teacher, yolo-student, yolo-kd, yolo-kd300) trên máy cá nhân
 yolo_cfg/                  cấu hình YOLO: student_p2p4.yaml (bài nộp), teacher_p2p4.yaml (thầy)
 kaggle_runs/
-  results.csv              ★ bảng kết quả của 46 thí nghiệm (mô tả cột ở dưới)
+  results.csv              ★ bảng kết quả của 47 thí nghiệm (mô tả cột ở dưới)
   <mã run>/                mỗi thí nghiệm 1 thư mục: script đúng như lúc chạy (edgeai_kaggle.py hoặc pipeline.ipynb),
                            kernel-metadata.json (cấu hình kernel Kaggle), output/*.log (log chạy)
 requirements.txt
