@@ -4,9 +4,15 @@
   python kaggle_runs/_tools.py parse <mã> "<thay đổi>"  -> đọc log trong kaggle_runs/<mã>/output, ghi results.csv
   python kaggle_runs/_tools.py accept <mã>      -> đưa thay đổi của <mã> vào mốc (state.json)
   python kaggle_runs/_tools.py gpu_hours        -> tổng giờ GPU đã dùng theo results.csv
+  python kaggle_runs/_tools.py whoami           -> tài khoản Kaggle đang dùng
+  python kaggle_runs/_tools.py retarget <mã>    -> đổi id kernel của kaggle_runs/<mã> sang tài khoản đang dùng
+
+Tài khoản Kaggle (USER) lấy theo thứ tự: biến môi trường KAGGLE_USER -> KAGGLE_USERNAME
+-> ~/.kaggle/kaggle.json (tài khoản CLI đang đăng nhập) -> "phngnam296".
 """
 import csv
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -15,7 +21,23 @@ RUNS = Path(__file__).resolve().parent
 SRC = RUNS.parent / "edgeai_kaggle.py"
 STATE = RUNS / "state.json"
 RESULTS = RUNS / "results.csv"
-USER = "phngnam296"
+
+
+def kaggle_user():
+    for k in ("KAGGLE_USER", "KAGGLE_USERNAME"):
+        if os.environ.get(k):
+            return os.environ[k]
+    # Token mới (access_token / KAGGLE_API_TOKEN) không ghi username -> bắt khai báo, tránh đẩy nhầm tài khoản
+    if os.environ.get("KAGGLE_API_TOKEN"):
+        sys.exit("Đang dùng KAGGLE_API_TOKEN (tài khoản khác) -> đặt thêm KAGGLE_USER=<username của tài khoản đó>")
+    cfg = Path(os.environ.get("KAGGLE_CONFIG_DIR", Path.home() / ".kaggle")) / "kaggle.json"
+    try:
+        return json.loads(cfg.read_text(encoding="utf-8"))["username"]
+    except (OSError, ValueError, KeyError):
+        return "phngnam296"
+
+
+USER = kaggle_user()
 COMP = "egde-ai-challenge-2026-lan-2-qualifiers"
 CLASSES = ["bottle", "cup", "phone", "book", "mouse", "box", "toy_car"]
 
@@ -182,6 +204,21 @@ def accept(exp):
     print("Mốc hiện tại:", s["accepted"])
 
 
+def retarget(exp):
+    """Đổi id kernel sang tài khoản đang dùng. kernel_sources (vd trọng số thầy) giữ nguyên: nếu thuộc
+    tài khoản khác thì kernel đó phải được share cho tài khoản này, hoặc chạy lại thầy trên tài khoản này."""
+    f = RUNS / exp / "kernel-metadata.json"
+    meta = json.loads(f.read_text(encoding="utf-8"))
+    old = meta["id"]
+    meta["id"] = f"{USER}/{old.split('/', 1)[1]}"
+    f.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"{exp}: {old} -> {meta['id']}")
+    for src in meta.get("kernel_sources", []):
+        if not src.startswith(USER + "/"):
+            print(f"  CHÚ Ý: kernel_sources {src} thuộc tài khoản khác -> phải share cho {USER} "
+                  f"(Share -> thêm người dùng) hoặc đổi sang kernel của {USER}, không thì kernel không đọc được.")
+
+
 def gpu_hours():
     if not RESULTS.exists():
         print("0.00")
@@ -192,4 +229,4 @@ def gpu_hours():
 if __name__ == "__main__":
     cmd, *args = sys.argv[1:]
     {"prepare": prepare, "parse": parse, "manual": manual, "accept": accept,
-     "gpu_hours": gpu_hours}[cmd](*args)
+     "gpu_hours": gpu_hours, "retarget": retarget, "whoami": lambda: print(USER)}[cmd](*args)

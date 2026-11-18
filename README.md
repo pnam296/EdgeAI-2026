@@ -8,11 +8,12 @@ Hạn nộp: **18/11/2026**.
 
 | | |
 |---|---|
-| Điểm public tốt nhất | **97,2** (run `A45-float`, dự đoán bằng model float, nộp 12/11/2026) |
-| mAP50 val detection | 0,966 (float, run `s4`, chưa nộp) |
+| Điểm public tốt nhất | **98,217** (run `final-ep300`: s4 + LR 3e-3 + 300 epoch + TRAIN_ON_ALL, nộp 16/11/2026) |
+| mAP50 val detection | 0,972 (float, run `lr3ep240`, train/val split) |
 | Intent | accuracy 1,0 trên holdout, đã đạt tối đa |
-| Mốc (cấu hình đang giữ) | `edgeai_float.py`: 320×240, ALPHA 0.45, STRIDE4, 196.307 tham số, 160 epoch |
-| Mục tiêu | 98 điểm, tức mAP50 detection khoảng 0,971 trên tập public |
+| Mốc (cấu hình đang giữ) | `edgeai_float.py`: 320×240, ALPHA 0.45, STRIDE4, LR 3e-3, 196.307 tham số |
+| Mục tiêu | ~~98 điểm~~ ✅ **ĐÃ ĐẠT** (98,217) |
+| Tổng giờ GPU | 92,3 giờ (Kaggle T4 + Colab) |
 
 **Công thức điểm** (đã khớp với điểm public): `điểm = 0,7 × mAP50 detection × 100 + 30 × accuracy intent`.
 mAP trên tập public thường thấp hơn mAP val khoảng 0,002.
@@ -113,6 +114,19 @@ kaggle kernels status <username>/edgeai-exp-<mã>
 # xong rồi thì tải log + kết quả về:
 kaggle kernels output <username>/edgeai-exp-<mã> -p kaggle_runs/<mã>/output
 ```
+
+**Chạy bằng tài khoản của thành viên khác trong đội** (mỗi người có quota riêng; KHÔNG tạo nhiều tài khoản cho
+một người, vi phạm luật Kaggle, có thể bị loại):
+1. Người đó vào trang cuộc thi bấm **Join / I Understand and Accept**, rồi đăng nhập CLI bằng `kaggle.json` của mình.
+   Chạy hộ trên máy khác: người đó tạo token ở kaggle.com/settings -> API -> *Generate New Token*, lưu vào một file
+   NGOÀI repo (vd `~/.kaggle/access_token_ban`), rồi trong PowerShell:
+   `$env:KAGGLE_API_TOKEN = "$HOME\.kaggle\access_token_ban"; $env:KAGGLE_USER = "<username>"`
+   (chỉ có tác dụng trong cửa sổ đó; mở cửa sổ mới là về lại tài khoản mặc định).
+2. `python kaggle_runs/_tools.py whoami`: kiểm tra tài khoản đang dùng (lấy từ `KAGGLE_USER`, hoặc `~/.kaggle/kaggle.json`).
+3. `python kaggle_runs/_tools.py retarget <mã>`: đổi `id` trong `kernel-metadata.json` sang tài khoản đó. Run mới
+   tạo bằng `prepare` tự dùng đúng tài khoản. `_wait.ps1` cũng tự lấy theo.
+4. Nếu run cần `kernel_sources` (vd trọng số thầy) của tài khoản khác, lệnh `retarget` sẽ cảnh báo: chủ kernel đó
+   phải **Share** kernel cho người chạy, hoặc người chạy tự chạy lại kernel thầy trên tài khoản mình.
 
 Quota GPU Kaggle là **30 giờ mỗi tuần cho mỗi tài khoản**, mỗi run tốn khoảng 2 giờ. Cột `gio_gpu` trong
 `results.csv` ghi số giờ đã dùng, `python kaggle_runs/_tools.py gpu_hours` in ra tổng.
@@ -239,7 +253,13 @@ Quy ước so sánh: **TB AP@0.5 của 7 lớp trên val** (seed 42, 20%) so v�
 Chênh **< 0,003 = nhiễu**. Mỗi run khoảng 2,3 giờ GPU (T4 x2 Kaggle).
 
 **Bước 1 – run `bakd`: tự distill (born-again), thầy = s4.**
-> Trạng thái 13/11: **đang chạy trên Kaggle** (`kaggle_runs/bakd`, KD_HM 1.0, KD_BOX 0.5). Code distill online đã có trong
+> Kết quả 13/11: **0,965** (TB 7 lớp 0,9654 vs s4 0,9656) = nhiễu -> KHÔNG GIỮ. Trò chỉ bằng thầy; book -0,009,
+> các lớp khác ±0,004. 2,69 giờ GPU. Theo tiêu chí còn 1 run phụ đổi trọng số.
+> Run phụ `bakd2` (KD_HM 0, KD_BOX 1.0): **0,965** (TB 0,9644, -0,001 = nhiễu, toy_car -0,009) -> KHÔNG GIỮ.
+> **Bỏ born-again**, sang Bước 2.
+> Cùng lúc: `s4-2g` = s4 chạy lại với `MULTI_GPU = True` (2 x T4): TB 0,9656 đúng bằng s4, train 112 phút thay
+> 134 phút -> **các run sau bật `MULTI_GPU = True`**.
+> (Trước đó: chạy trên Kaggle `kaggle_runs/bakd`, KD_HM 1.0, KD_BOX 0.5.) Code distill online đã có trong
 > `edgeai_float.py` (`KD_HM`, `KD_BOX`, `TEACHER_WEIGHTS`; mặc định 0 = tắt). Đã chạy thử trên máy: thầy nạp đúng,
 > không bị cập nhật khi train, trò cập nhật đủ.
 Trò = đúng kiến trúc s4, train lại từ đầu 160 epoch, thầy = trọng số `tiny_det_best.weights.h5` của kernel s4
@@ -252,6 +272,11 @@ Trò = đúng kiến trúc s4, train lại từ đầu 160 epoch, thầy = trọ
 - Lỗi khi chạy (không nạp được thầy, lệch shape): sửa và chạy lại, không tính là kết quả.
 
 **Bước 2 – thầy lớn train từ đầu (`tbig`) rồi distill (`tkd`).**
+> Kết quả 13/11: `tbig` (ALPHA 0.75, NECK_CH 96, 474,6k tham số) = **0,975** (TB 7 lớp 0,9754, +0,010 so s4, mọi lớp
+> tăng) -> đạt ngưỡng, **chạy `tkd`** với `TEACHER_ALPHA, TEACHER_NECK = 0.75, 96`. 3,41 giờ GPU (tài khoản dohuuminhtri).
+> Kết quả 14/11 (thầy = `kernel_sources: dohuuminhtri/edgeai-exp-tbig`, trò s4, MULTI_GPU):
+> `tkd` (KD_HM 1.0, KD_BOX 0.5) = TB 0,9650; `tkd2` (KD_HM 2.0, KD_BOX 1.0) = TB 0,9654. Cả hai = nhiễu so s4 0,9656
+> -> **KHÔNG GIỮ, bỏ distill**. Thầy hơn 0,010 nhưng không truyền được qua heatmap/box. Sang Bước 3 với s4.
 - `tbig`: cùng code, **bỏ trần tham số**: ALPHA 1.0, NECK_CH 128, STRIDE4, train trên 4.800 ảnh train
   (không val, không test). Ghi mAP val của thầy vào `results.csv`.
   - Thầy **≥ 0,975**: đủ mạnh -> chạy `tkd` (trò s4 + KD_HM + KD_BOX + KD_FEAT).
@@ -265,6 +290,8 @@ Trò = đúng kiến trúc s4, train lại từ đầu 160 epoch, thầy = trọ
 - Kiểm tra bắt buộc: đủ 4.000 ảnh test, ràng buộc OK, `submission.csv` hợp lệ.
 
 **Bước 4 – nộp.**
+> 14/11: đã nộp `final-s4` (s4 + TRAIN_ON_ALL, `kaggle_runs/final-s4`) -> **public 97,781** -> chọn làm bài chính thức.
+> Từ giờ nộp luôn ghi mô tả (`-m "<mã run>"`) để biết bài nào là run nào.
 - Nộp `final`. Nếu điểm public **thấp hơn** bản đang có (97,2 của A45-float) -> chọn lại bản cũ làm bài chính thức.
 - Luôn giữ 1 bản dự phòng đã nộp được (`s4` hoặc `A45-float`).
 - Không có gì cải thiện ở Bước 1–2 -> nộp **s4 + TRAIN_ON_ALL**.

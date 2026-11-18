@@ -36,13 +36,14 @@ INPUT_W, INPUT_H = 320, 240   # mỗi chiều <= 160 và chia hết cho 16
 ALPHA = 0.45                  # 0.25 -> ~79k tham số; 0.35 -> ~130k tham số
 NECK_CH = 64
 WH_LOG = False                # True: học log(w), log(h)
-EPOCHS = 160                  # 6.000 ảnh -> mỗi epoch nhiều bước hơn Warm-up; xem ETA in ra rồi chỉnh
+EPOCHS = 300                  # 6.000 ảnh -> mỗi epoch nhiều bước hơn Warm-up; xem ETA in ra rồi chỉnh
 BATCH = 16
-LR = 2e-3
+LR = 3e-3
 EVAL_EVERY = 5
 # Dừng sớm (PATIENCE > 0): bỏ cosine, giữ LR cố định, val mAP không tăng PLATEAU epoch -> LR x0.5;
 # không tăng PATIENCE epoch (hoặc LR đã chạm sàn) -> dừng. EPOCHS khi đó chỉ là trần tối đa.
 PATIENCE = 0                  # 0 = tắt (dùng cosine theo EPOCHS như cũ)
+MAX_TRAIN_MIN = 0             # > 0: dừng train khi epoch kế tiếp sẽ vượt N phút (giữ quota Kaggle), vẫn đánh giá + ghi kết quả
 # Tắt augment ở N epoch cuối (kiểu close_mosaic của YOLO): cuối quá trình train model thấy ảnh
 # giống hệt ảnh test -> tinh chỉnh vị trí box. 0 = augment suốt (như mốc); = EPOCHS -> không augment gì.
 NO_AUG_LAST = 0
@@ -69,7 +70,29 @@ TEACHER_ALPHA, TEACHER_NECK = 0.45, 64          # kiến trúc thầy (STRIDE4 g
 PRETRAINED = False
 # Thêm tầng stride 4 vào neck -> lưới đầu ra 80x60 thay 40x30 (vật nhỏ như toy_car ~12 px chiếm nhiều ô hơn).
 STRIDE4 = True
+# ---- Thử nghiệm kiến trúc 17/11 (mặc định = đúng s4) ----
+C16_LAYER = "block_13_expand_relu"   # "block_12_add": bỏ block_13 + lat16 nhỏ hơn -> tiết kiệm ~23k tham số cho head
+HEAD_DEC = False              # True: head tách 2 nhánh (heatmap / box) mỗi nhánh HEAD_CONVS sep-conv, thay 2 sep-conv dùng chung
+HEAD_CONVS = 2
+OS8 = False                   # True: block_6 không giảm kích thước -> block 7-13 chạy ở stride 8 (lưới 40x30 thay 20x15),
+                              # cùng số tham số, tốn ~x2-3 phép tính. Nhắm vào vật nhỏ (< 24 px lỗi 7-21%).
+LAT4_CONV = 0                 # số sep-conv thêm trên nhánh stride 4 (block_3_expand chỉ sâu 3 block) trước khi cộng
 WORKERS = 4                   # số luồng chuẩn bị dữ liệu song song (Kaggle có 4 nhân CPU)
+# Train trên mọi GPU (Kaggle T4 x2) bằng MirroredStrategy. Batch TỔNG vẫn = BATCH (mỗi GPU BATCH/số GPU ảnh)
+# -> gradient như 1 GPU, chỉ khác BatchNorm tính thống kê trên BATCH/số GPU ảnh. False = 1 GPU như mọi run cũ.
+MULTI_GPU = True
+# ---- Thử nghiệm vòng 15/11 (mặc định = đúng s4, không đổi gì) ----
+SPLIT_SEED = 42               # seed chia train/val: GIỮ 42 để mọi run so cùng tập val; SEED chỉ đổi khởi tạo + augment
+EMA = 0.0                     # > 0 (vd 0.999): trung bình trượt trọng số, đánh giá + lưu bằng trọng số EMA
+BOX_W = 1.0                   # hệ số cả loss box so với loss heatmap
+WH_W = 0.1                    # hệ số phần w, h trong loss box (khi WH_LOG = False)
+GIOU_W = 0.0                  # > 0: thêm loss GIoU giữa box dự đoán và box thật ở ô có vật
+BOX_NB = 0                    # 1: gán đích box cho cả 3x3 ô quanh tâm (thêm mẫu học box), dự đoán vẫn lấy ở đỉnh
+MOSAIC = 0.0                  # xác suất ghép 4 ảnh (cùng tỉ lệ, cắt cửa sổ ngẫu nhiên) trước augment thường
+DEC_NB, DEC_PW = 1, 2         # giải box: trung bình 3x3 ô quanh đỉnh, trọng số heat^2 (0 = chỉ ô đỉnh như run cũ)
+# Trọng số lớp cho focal loss và box loss (None = đều nhau 1.0).
+# Thứ tự: [bottle, cup, phone, book, mouse, box, toy_car]
+CLASS_WEIGHTS = [0.8, 0.8, 1.1, 1.25, 1.1, 0.8, 1.35]
 # Intent
 RUN_INTENT = True
 INTENT_EPOCHS, INTENT_BATCH, MAX_LEN = 20, 64, 24
@@ -121,6 +144,12 @@ gpus = tf.config.list_physical_devices("GPU")
 for g in gpus:
     tf.config.experimental.set_memory_growth(g, True)
 print(f"TensorFlow {tf.__version__} | GPU: {[g.name for g in gpus] or 'KHÔNG CÓ (đang chạy CPU!)'}")
+if MULTI_GPU and len(gpus) > 1:
+    STRATEGY = tf.distribute.MirroredStrategy()
+    assert BATCH % STRATEGY.num_replicas_in_sync == 0, "BATCH phải chia hết cho số GPU"
+else:
+    STRATEGY = tf.distribute.get_strategy()   # mặc định: 1 thiết bị
+print(f"Train trên {STRATEGY.num_replicas_in_sync} thiết bị ({type(STRATEGY).__name__})")
 tf.keras.utils.set_random_seed(SEED)
 
 assert INPUT_W % 16 == 0 and INPUT_H % 16 == 0 and INPUT_W <= 320 and INPUT_H <= 240
@@ -404,12 +433,48 @@ def encode_targets(boxes, num_classes):
         heat[iy, ix, c] = 1.0
         if WH_LOG:
             w, h = np.log(max(w, 1e-3)), np.log(max(h, 1e-3))
-        box[iy, ix, 4 * c: 4 * c + 4] = [w, h, cx - ix, cy - iy]
-        box[iy, ix, 4 * C + c] = 1.0
+        # BOX_NB: ô lân cận chỉ nhận đích nếu chưa có (không đè tâm của vật khác cùng lớp); tâm luôn ghi đè
+        for jy in range(iy - BOX_NB, iy + BOX_NB + 1):
+            for jx in range(ix - BOX_NB, ix + BOX_NB + 1):
+                center = jy == iy and jx == ix
+                if 0 <= jy < GRID_H and 0 <= jx < GRID_W and (center or box[jy, jx, 4 * C + c] == 0):
+                    box[jy, jx, 4 * c: 4 * c + 4] = [w, h, cx - jx, cy - jy]
+                    box[jy, jx, 4 * C + c] = 1.0
     return heat, box
 
 
-def decode(heat, box, orig_size, max_det=100, min_score=0.001):
+def mosaic(samples, rng):
+    """Ghép 4 ảnh (đổi về INPUT_W x INPUT_H) thành canvas 2x, cắt cửa sổ INPUT_W x INPUT_H ở vị trí ngẫu nhiên.
+    Giữ nguyên tỉ lệ vật (không thu nhỏ như mosaic của YOLO) -> chỉ trộn bối cảnh, không làm vật nhỏ đi."""
+    W, H = INPUT_W, INPUT_H
+    canvas = np.zeros((2 * H, 2 * W, 3), np.uint8)
+    allb = []
+    for k, s in enumerate(samples):
+        qx, qy = k % 2, k // 2
+        canvas[qy * H:(qy + 1) * H, qx * W:(qx + 1) * W] = cv2.resize(s["img"], (W, H), interpolation=cv2.INTER_AREA)
+        b = s["boxes"].copy()
+        if len(b):
+            b[:, [1, 3]] = (b[:, [1, 3]] + qx) / 2
+            b[:, [2, 4]] = (b[:, [2, 4]] + qy) / 2
+            allb.append(b)
+    x0, y0 = int(rng.integers(0, W + 1)), int(rng.integers(0, H + 1))
+    img = canvas[y0:y0 + H, x0:x0 + W]
+    boxes = np.concatenate(allb) if allb else np.zeros((0, 5), np.float32)
+    if len(boxes):
+        area0 = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 4] - boxes[:, 2])
+        b = boxes.copy()
+        b[:, [1, 3]] = np.clip((b[:, [1, 3]] * 2 * W - x0) / W, 0, 1)
+        b[:, [2, 4]] = np.clip((b[:, [2, 4]] * 2 * H - y0) / H, 0, 1)
+        area1 = (b[:, 3] - b[:, 1]) * (b[:, 4] - b[:, 2]) / 4   # đơn vị canvas
+        keep = (area1 > 0.4 * area0) & (b[:, 3] - b[:, 1] > 0.005) & (b[:, 4] - b[:, 2] > 0.005)
+        boxes = b[keep].astype(np.float32)
+    return np.ascontiguousarray(img), boxes
+
+
+def decode(heat, box, orig_size, max_det=100, min_score=0.001, nb=None):
+    """nb (mặc định DEC_NB): box = trung bình box dự đoán ở (2nb+1)^2 ô quanh đỉnh, trọng số heat^DEC_PW.
+    Hậu xử lý trên 1 lần chạy model (không phải TTA). Đo trên s4: +0.0015..0.002 mAP50 so với chỉ lấy ô đỉnh."""
+    nb = DEC_NB if nb is None else nb
     W0, H0 = orig_size
     padded = np.pad(heat, ((1, 1), (1, 1), (0, 0)), constant_values=-1)
     local_max = np.max(np.stack([padded[dy:dy + GRID_H, dx:dx + GRID_W] for dy in range(3) for dx in range(3)]), axis=0)
@@ -418,7 +483,18 @@ def decode(heat, box, orig_size, max_det=100, min_score=0.001):
     scores = heat[iy, ix, c]
     out = []
     for i in np.argsort(-scores)[:max_det]:
-        w, h, dx, dy = box[iy[i], ix[i], 4 * c[i]: 4 * c[i] + 4]
+        y, x, k = iy[i], ix[i], c[i]
+        if nb > 0 and not WH_LOG:
+            ys, xs = slice(max(0, y - nb), min(GRID_H, y + nb + 1)), slice(max(0, x - nb), min(GRID_W, x + nb + 1))
+            wt = heat[ys, xs, k] ** DEC_PW
+            b = box[ys, xs, 4 * k: 4 * k + 4]
+            gy, gx = np.mgrid[ys, xs]
+            wsum = wt.sum()
+            w, h = (wt * b[..., 0]).sum() / wsum, (wt * b[..., 1]).sum() / wsum
+            dx = (wt * (gx + b[..., 2])).sum() / wsum - x
+            dy = (wt * (gy + b[..., 3])).sum() / wsum - y
+        else:
+            w, h, dx, dy = box[y, x, 4 * k: 4 * k + 4]
         if WH_LOG:
             w, h = float(np.exp(min(w, 4.0))), float(np.exp(min(h, 4.0)))
         w, h = max(float(w), 0.05), max(float(h), 0.05)
@@ -477,6 +553,14 @@ def build_model(num_classes, alpha=None, neck_ch=None, name="tiny_centernet"):
     NECK_CH = neck_ch or globals()["NECK_CH"]
     base = tf.keras.applications.MobileNetV2(input_shape=(INPUT_H, INPUT_W, 3), alpha=ALPHA,
                                              include_top=False, weights=None)
+    if OS8:   # sửa cấu hình: block_6 stride 2 -> 1 (đệm 1 ô mỗi phía để giữ kích thước)
+        cfg = base.get_config()
+        for l in cfg["layers"]:
+            if l["config"]["name"] == "block_6_pad":
+                l["config"]["padding"] = ((1, 1), (1, 1))
+            if l["config"]["name"] == "block_6_depthwise":
+                l["config"]["strides"] = (1, 1)
+        base = tf.keras.Model.from_config(cfg)
     if PRETRAINED and name == "tiny_centernet":
         assert ALPHA in (0.35, 0.5, 0.75, 1.0), f"Không có trọng số ImageNet cho ALPHA {ALPHA}"
         ref = tf.keras.applications.MobileNetV2(input_shape=(224, 224, 3), alpha=ALPHA,
@@ -484,7 +568,7 @@ def build_model(num_classes, alpha=None, neck_ch=None, name="tiny_centernet"):
         base.set_weights(ref.get_weights())
         print(f"Backbone khởi tạo từ ImageNet (MobileNetV2 alpha {ALPHA})")
     c8 = base.get_layer("block_6_expand_relu").output
-    c16 = base.get_layer("block_13_expand_relu").output
+    c16 = base.get_layer(C16_LAYER).output
     p16 = _conv_bn_relu(c16, NECK_CH, name="lat16")
     p16 = ResizeNearest((INPUT_H // 8, INPUT_W // 8), name="up16")(p16)
     p8 = _conv_bn_relu(c8, NECK_CH, name="lat8")
@@ -493,35 +577,50 @@ def build_model(num_classes, alpha=None, neck_ch=None, name="tiny_centernet"):
         c4 = base.get_layer("block_3_expand_relu").output
         x = _sep_conv(x, NECK_CH, "neck8")
         x = ResizeNearest((INPUT_H // 4, INPUT_W // 4), name="up8")(x)
-        x = L.Add(name="fuse4")([_conv_bn_relu(c4, NECK_CH, name="lat4"), x])
-    x = _sep_conv(x, NECK_CH, "neck1")
-    x = _sep_conv(x, NECK_CH, "neck2")
+        l4 = _conv_bn_relu(c4, NECK_CH, name="lat4")
+        for j in range(LAT4_CONV):
+            l4 = _sep_conv(l4, NECK_CH, f"lat4s{j}")
+        x = L.Add(name="fuse4")([l4, x])
+    if HEAD_DEC and name == "tiny_centernet":
+        xh, xb = x, x
+        for j in range(HEAD_CONVS):
+            xh = _sep_conv(xh, NECK_CH, f"hh{j}")
+            xb = _sep_conv(xb, NECK_CH, f"hb{j}")
+    else:
+        x = _sep_conv(x, NECK_CH, "neck1")
+        x = _sep_conv(x, NECK_CH, "neck2")
+        xh = xb = x
     heat = L.Conv2D(num_classes, 1, activation="sigmoid", name="heatmap",
-                    bias_initializer=tf.keras.initializers.Constant(-2.19))(x)
-    box = L.Conv2D(4 * num_classes, 1, name="box")(x)
+                    bias_initializer=tf.keras.initializers.Constant(-2.19))(xh)
+    box = L.Conv2D(4 * num_classes, 1, name="box")(xb)
     return tf.keras.Model(base.input, [heat, box], name=name)
 
 
-def focal_loss(y_true, y_pred):
+def focal_loss(y_true, y_pred, cw=None):
     p = tf.clip_by_value(y_pred, 1e-4, 1 - 1e-4)
     pos = tf.cast(tf.equal(y_true, 1.0), tf.float32)
     pos_loss = tf.math.log(p) * tf.square(1 - p) * pos
     neg_loss = tf.math.log(1 - p) * tf.square(p) * tf.pow(1 - y_true, 4) * (1 - pos)
+    loss_all = pos_loss + neg_loss
+    if cw is not None:
+        loss_all = loss_all * cw
     n_pos = tf.maximum(tf.reduce_sum(pos, axis=[1, 2, 3]), 1.0)
-    return -tf.reduce_sum(pos_loss + neg_loss, axis=[1, 2, 3]) / n_pos
+    return -tf.reduce_sum(loss_all, axis=[1, 2, 3]) / n_pos
 
 
-def make_heat_loss(num_classes):
+def make_heat_loss(num_classes, cw=None):
     """y_true = [heatmap nhãn thật (C kênh) | heatmap thầy (C kênh, chỉ khi KD_WEIGHT > 0)]."""
     C = num_classes
 
     def heat_loss(y_true, y_pred):
         gt = y_true[..., :C]
-        loss = focal_loss(gt, y_pred)
+        loss = focal_loss(gt, y_pred, cw=cw)
         if KD_WEIGHT > 0:
             t = y_true[..., C:]
             p = tf.clip_by_value(y_pred, 1e-4, 1 - 1e-4)
             bce = -(t * tf.math.log(p) + (1 - t) * tf.math.log(1 - p))
+            if cw is not None:
+                bce = bce * cw
             n_pos = tf.maximum(tf.reduce_sum(tf.cast(tf.equal(gt, 1.0), tf.float32), axis=[1, 2, 3]), 1.0)
             loss += KD_WEIGHT * tf.reduce_sum(tf.square(t - p) * bce, axis=[1, 2, 3]) / n_pos
         return loss
@@ -529,9 +628,24 @@ def make_heat_loss(num_classes):
     return heat_loss
 
 
-def make_box_loss(num_classes, off_weight=1.0):
+def giou_loss(pred, tgt):
+    """1 - GIoU theo đơn vị ô lưới; pred/tgt [..., 4] = (w, h, dx, dy) (WH_LOG = False)."""
+    def corners(b):
+        w, h = tf.maximum(b[..., 0], 0.0), tf.maximum(b[..., 1], 0.0)
+        return b[..., 2] - w / 2, b[..., 3] - h / 2, b[..., 2] + w / 2, b[..., 3] + h / 2, w * h
+    px1, py1, px2, py2, pa = corners(pred)
+    tx1, ty1, tx2, ty2, ta = corners(tgt)
+    inter = tf.maximum(tf.minimum(px2, tx2) - tf.maximum(px1, tx1), 0.0) * \
+        tf.maximum(tf.minimum(py2, ty2) - tf.maximum(py1, ty1), 0.0)
+    union = pa + ta - inter + 1e-6
+    enc = (tf.maximum(px2, tx2) - tf.minimum(px1, tx1)) * (tf.maximum(py2, ty2) - tf.minimum(py1, ty1)) + 1e-6
+    return 1.0 - (inter / union - (enc - union) / enc)
+
+
+def make_box_loss(num_classes, off_weight=1.0, cw=None):
     C = num_classes
-    wh_weight = 1.0 if WH_LOG else 0.1
+    wh_weight = 1.0 if WH_LOG else WH_W
+    assert not (GIOU_W > 0 and WH_LOG), "GIOU_W cần WH_LOG = False"
 
     def box_loss(y_true, y_pred):
         shape = tf.shape(y_pred)
@@ -539,10 +653,18 @@ def make_box_loss(num_classes, off_weight=1.0):
         pred = tf.reshape(y_pred, [shape[0], shape[1], shape[2], C, 4])
         mask = y_true[..., 4 * C:][..., None]
         err = tf.abs(pred - tgt) * mask
+        if cw is not None:
+            err = err * cw[..., None]
         n = tf.maximum(tf.reduce_sum(mask, axis=[1, 2, 3, 4]), 1.0)
         wh = tf.reduce_sum(err[..., :2], axis=[1, 2, 3, 4])
         off = tf.reduce_sum(err[..., 2:], axis=[1, 2, 3, 4])
-        return (wh_weight * wh + off_weight * off) / n
+        loss = (wh_weight * wh + off_weight * off) / n
+        if GIOU_W > 0:
+            g = giou_loss(pred, tgt) * mask[..., 0]
+            if cw is not None:
+                g = g * cw
+            loss += GIOU_W * tf.reduce_sum(g, axis=[1, 2, 3]) / n
+        return loss
 
     return box_loss
 
@@ -627,6 +749,10 @@ class DetDataset(tf.keras.utils.PyDataset):
                 comb = np.concatenate([np.c_[s["boxes"], -np.ones(len(s["boxes"]), np.float32)], tb])
                 img, comb = augment(s["img"], comb, rng) if do_aug else (s["img"], comb)
                 boxes, tb = comb[comb[:, 5] < 0, :5], comb[comb[:, 5] >= 0]
+            elif do_aug and MOSAIC > 0 and rng.random() < MOSAIC:
+                others = rng.integers(0, len(self.samples), 3)
+                img, boxes = mosaic([s] + [self.samples[k] for k in others], rng)
+                img, boxes = augment(img, boxes, rng)
             else:
                 img, boxes = augment(s["img"], s["boxes"], rng) if do_aug else (s["img"], s["boxes"])
             h, b = encode_targets(boxes, self.C)
@@ -682,7 +808,7 @@ for p in _all_train[:6]:
     cv2.imwrite(str(_prev / f"{p.stem}.jpg"), im)
 print(f"Đã vẽ box lên 6 ảnh: {_prev}  (MỞ RA XEM trước khi chạy thật!)")
 
-train_paths, val_paths = split_train_val(seed=SEED)
+train_paths, val_paths = split_train_val(seed=SPLIT_SEED)
 if TRAIN_ON_ALL:
     train_paths = train_paths + val_paths
 if QUICK_TEST:
@@ -700,9 +826,9 @@ print(f"Train {len(train_s)} | Val {len(val_s)} | Test {len(test_paths)} | đầ
 X_val = np.stack([preprocess(s["img"]) for s in val_s])
 
 
-def evaluate(predict_fn, samples, X, iou_thr=0.5):
+def evaluate(predict_fn, samples, X, iou_thr=0.5, nb=None):
     heat, box = predict_fn(X)
-    preds = {s["id"]: decode(heat[i], box[i], s["orig_size"]) for i, s in enumerate(samples)}
+    preds = {s["id"]: decode(heat[i], box[i], s["orig_size"], nb=nb) for i, s in enumerate(samples)}
     return map50(preds, {s["id"]: gt_pixels(s) for s in samples}, C, iou_thr=iou_thr, return_per_class=True)
 
 
@@ -714,13 +840,26 @@ class MapCheckpoint(tf.keras.callbacks.Callback):
         self.ref, self.ref_epoch = -1.0, 0   # mốc để tính kiên nhẫn (phải vượt MIN_DELTA)
 
     def on_epoch_end(self, epoch, logs=None):
-        if (epoch + 1) % EVAL_EVERY and epoch + 1 != EPOCHS:
+        if MAX_TRAIN_MIN > 0 and (time.time() - self.t) * (epoch + 2) / (epoch + 1) > MAX_TRAIN_MIN * 60:
+            self.model.stop_training = True
+            print(f"  DỪNG ở epoch {epoch + 1}: epoch kế tiếp sẽ vượt MAX_TRAIN_MIN {MAX_TRAIN_MIN} phút", flush=True)
+        if (epoch + 1) % EVAL_EVERY and epoch + 1 != EPOCHS and not self.model.stop_training:
             return
+        # EMA: tạm thay trọng số train bằng trọng số trung bình trượt để đánh giá + lưu, xong trả lại
+        opt = self.model.optimizer
+        backup = None
+        if EMA > 0:
+            tv = self.net.trainable_variables
+            backup = [v.numpy() for v in tv]
+            opt._overwrite_model_variables_with_average_value(tv)
         m, _ = evaluate(lambda x: self.net.predict(x, batch_size=64, verbose=0), val_s, X_val)
         mark = ""
         if m >= self.best:
             self.best, self.best_epoch, mark = m, epoch + 1, "  <- tốt nhất, đã lưu"
             self.net.save_weights(self.path)
+        if backup is not None:
+            for v, b in zip(self.net.trainable_variables, backup):
+                v.assign(b)
         per_ep = (time.time() - self.t) / (epoch + 1)
         note = ""
         if PATIENCE > 0:
@@ -742,39 +881,45 @@ class MapCheckpoint(tf.keras.callbacks.Callback):
               f"| {per_ep:.1f}s/epoch, tối đa còn ~{per_ep * (EPOCHS - epoch - 1) / 60:.0f} phút{note}", flush=True)
 
 
-model = build_model(C)
-n_params = model.count_params()
-print(f"Số tham số: {n_params:,} (giới hạn {MAX_PARAMS:,})")
-steps = int(np.ceil(len(train_s) / BATCH)) * EPOCHS
-if PATIENCE > 0:
-    assert not TRAIN_ON_ALL, "TRAIN_ON_ALL thì val nằm trong train -> không dùng dừng sớm; đặt PATIENCE=0, EPOCHS=epoch tốt nhất"
-    _lr = LR
-else:
-    _lr = tf.keras.optimizers.schedules.CosineDecay(LR, steps, alpha=0.05)
-USE_KD = KD_HM > 0 or KD_BOX > 0
-if USE_KD:
-    assert KD_WEIGHT == 0, "Không bật cùng lúc distill offline (KD_WEIGHT) và online (KD_HM/KD_BOX)"
-    teacher = build_model(C, TEACHER_ALPHA, TEACHER_NECK, name="teacher")
-    _tw = find_teacher_weights()
-    teacher.load_weights(_tw)
-    teacher.trainable = False
-    m_t, _ = evaluate(lambda x: teacher.predict(x, batch_size=64, verbose=0), val_s, X_val)
-    print(f"Thầy: {_tw} | {teacher.count_params():,} tham số | val mAP50 {m_t:.3f} "
-          f"| KD_HM {KD_HM}, KD_BOX {KD_BOX} (thầy chỉ dùng lúc train, không nộp)")
-    _inp = tf.keras.Input((INPUT_H, INPUT_W, 3))
-    s_heat, s_box = model(_inp)
-    t_heat, t_box = teacher(_inp, training=False)
-    train_model = tf.keras.Model(_inp, [L.Concatenate(name="kd_heat")([s_heat, t_heat]),
-                                        L.Concatenate(name="kd_box")([s_box, t_box, t_heat])], name="kd_wrap")
-    _losses = [make_kd_heat_loss(C), make_kd_box_loss(C)]
-else:
-    train_model = model
-    _losses = [make_heat_loss(C), make_box_loss(C)]
-train_model.compile(optimizer=tf.keras.optimizers.Adam(_lr),
-                    loss=_losses,
-                    # Tắt XLA: trên GPU Keras 3 tự bật XLA, mà XLA không có đạo hàm của resize nearest
-                    # (ResizeNearestNeighborGrad). Không ảnh hưởng mô hình hay file TFLite.
-                    jit_compile=False)
+# Model, thầy, optimizer phải tạo trong scope của STRATEGY để được chép lên mọi GPU
+with STRATEGY.scope():
+    model = build_model(C)
+    n_params = model.count_params()
+    print(f"Số tham số: {n_params:,} (giới hạn {MAX_PARAMS:,})")
+    if CLASS_WEIGHTS is not None:
+        print(f"Trọng số lớp (CLASS_WEIGHTS): {dict(zip(classes, CLASS_WEIGHTS))}")
+    steps = int(np.ceil(len(train_s) / BATCH)) * EPOCHS
+    if PATIENCE > 0:
+        assert not TRAIN_ON_ALL, "TRAIN_ON_ALL thì val nằm trong train -> không dùng dừng sớm; đặt PATIENCE=0, EPOCHS=epoch tốt nhất"
+        _lr = LR
+    else:
+        _lr = tf.keras.optimizers.schedules.CosineDecay(LR, steps, alpha=0.05)
+    USE_KD = KD_HM > 0 or KD_BOX > 0
+    if USE_KD:
+        assert KD_WEIGHT == 0, "Không bật cùng lúc distill offline (KD_WEIGHT) và online (KD_HM/KD_BOX)"
+        teacher = build_model(C, TEACHER_ALPHA, TEACHER_NECK, name="teacher")
+        _tw = find_teacher_weights()
+        teacher.load_weights(_tw)
+        teacher.trainable = False
+        m_t, _ = evaluate(lambda x: teacher.predict(x, batch_size=64, verbose=0), val_s, X_val)
+        print(f"Thầy: {_tw} | {teacher.count_params():,} tham số | val mAP50 {m_t:.3f} "
+              f"| KD_HM {KD_HM}, KD_BOX {KD_BOX} (thầy chỉ dùng lúc train, không nộp)")
+        _inp = tf.keras.Input((INPUT_H, INPUT_W, 3))
+        s_heat, s_box = model(_inp)
+        t_heat, t_box = teacher(_inp, training=False)
+        train_model = tf.keras.Model(_inp, [L.Concatenate(name="kd_heat")([s_heat, t_heat]),
+                                            L.Concatenate(name="kd_box")([s_box, t_box, t_heat])], name="kd_wrap")
+        _losses = [make_kd_heat_loss(C), make_kd_box_loss(C)]
+    else:
+        train_model = model
+        _cw = tf.constant(CLASS_WEIGHTS, dtype=tf.float32)[None, None, None, :] if CLASS_WEIGHTS is not None else None
+        _losses = [make_heat_loss(C, cw=_cw), make_box_loss(C, cw=_cw)]
+    assert not (EMA > 0 and USE_KD), "EMA chưa hỗ trợ distill online (biến trainable của model bọc khác model trò)"
+    train_model.compile(optimizer=tf.keras.optimizers.Adam(_lr, use_ema=EMA > 0, ema_momentum=EMA or 0.99),
+                        loss=_losses, loss_weights=[1.0, BOX_W],
+                        # Tắt XLA: trên GPU Keras 3 tự bật XLA, mà XLA không có đạo hàm của resize nearest
+                        # (ResizeNearestNeighborGrad). Không ảnh hưởng mô hình hay file TFLite.
+                        jit_compile=False)
 ckpt = MapCheckpoint(str(OUT / "tiny_det_best.weights.h5"), model)
 if RESUME_WEIGHTS:
     assert Path(RESUME_WEIGHTS).exists(), f"Không thấy {RESUME_WEIGHTS} - đặt RESUME_WEIGHTS = \"\" để train lại"
@@ -792,6 +937,9 @@ predict_float = lambda x: model.predict(x, batch_size=64, verbose=0)
 m_float, per_cls = evaluate(predict_float, val_s, X_val)
 _, per_cls30 = evaluate(predict_float, val_s, X_val, iou_thr=0.3)
 print(f"\nmAP50 val (float32): {m_float:.3f}")
+if DEC_NB > 0:   # để so với run cũ (giải box chỉ ở ô đỉnh)
+    print(f"mAP50 val giải box kiểu cũ (DEC_NB 0): {evaluate(predict_float, val_s, X_val, nb=0)[0]:.4f} "
+          f"| kiểu mới (DEC_NB {DEC_NB}, heat^{DEC_PW}): {m_float:.4f}")
 print(f"  {'lớp':<24}{'AP@0.5':>8}{'AP@0.3':>8}  chẩn đoán")
 for c, ap in per_cls.items():
     ap30 = per_cls30[c]
