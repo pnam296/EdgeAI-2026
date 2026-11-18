@@ -1,0 +1,37 @@
+[{"stream_name":"stdout","time":42.310333863,"data":"Dữ liệu: /kaggle/input/competitions/egde-ai-challenge-2026-lan-2-qualifiers\n"}
+,{"stream_name":"stdout","time":42.310381919,"data":"Kết quả: /kaggle/working\n"}
+,{"stream_name":"stdout","time":46.711235053,"data":"TensorFlow 2.21.0 | GPU: ['/physical_device:GPU:0', '/physical_device:GPU:1']\n"}
+,{"stream_name":"stdout","time":46.715140054,"data":"Train trên 1 thiết bị (_DefaultDistributionStrategy)\n"}
+,{"stream_name":"stdout","time":46.719581354,"data":"\n"}
+,{"stream_name":"stdout","time":46.719598929,"data":"===== KIỂM TRA TRƯỚC KHI TRAIN =====\n"}
+,{"stream_name":"stdout","time":46.719605187,"data":"7 lớp: ['bottle', 'cup', 'phone', 'book', 'mouse', 'box', 'toy_car']\n"}
+,{"stream_name":"stdout","time":46.810057485,"data":"Ảnh test: 4000 | sample_id DETECTION cần: 4000 | khớp: 4000\n"}
+,{"stream_name":"stdout","time":46.888815805,"data":"  00001.txt: ['1 0.559375 0.295833 0.093750 0.116667', '3 0.235937 0.793750 0.303125 0.212500', '6 0.801562 0.356250 0.078125 0.087500', '5 0.257812 0.472917 0.296875 0.379167']\n"}
+,{"stream_name":"stdout","time":46.891090171,"data":"  00002.txt: ['1 0.262500 0.712500 0.187500 0.283333', '5 0.426563 0.479167 0.278125 0.400000', '6 0.518750 0.352083 0.037500 0.037500', '0 0.814063 0.587500 0.115625 0.308333']\n"}
+,{"stream_name":"stdout","time":46.894633764,"data":"  00003.txt: ['2 0.757812 0.662500 0.203125 0.141667', '6 0.290625 0.372917 0.037500 0.037500', '1 0.207813 0.483333 0.078125 0.175000', '0 0.270313 0.495833 0.096875 0.325000']\n"}
+,{"stream_name":"stdout","time":50.329568834,"data":"Kiểm tra định dạng nhãn trên 300 ảnh, 2067 dòng:\n"}
+,{"stream_name":"stdout","time":50.32959738,"data":"  yolo            hợp lệ 2067/2067\n"}
+,{"stream_name":"stdout","time":50.329602237,"data":"  xyxy_px         hợp lệ 3/2067\n"}
+,{"stream_name":"stdout","time":50.32960611,"data":"  xyxy_norm       hợp lệ 3/2067\n"}
+,{"stream_name":"stdout","time":50.329610481,"data":"  xyxy_px_last    hợp lệ 0/2067\n"}
+,{"stream_name":"stdout","time":50.329615244,"data":"  xyxy_norm_last  hợp lệ 0/2067\n"}
+,{"stream_name":"stdout","time":50.329619555,"data":"  -\u003e định dạng còn hợp lý sau khi xét pixel/chuẩn hóa: ['yolo', 'xyxy_norm', 'xyxy_px_last']\n"}
+,{"stream_name":"stdout","time":50.329624741,"data":"=\u003e Định dạng nhãn: yolo\n"}
+,{"stream_name":"stdout","time":50.382806833,"data":"Đã vẽ box lên 6 ảnh: /kaggle/working/label_preview  (MỞ RA XEM trước khi chạy thật!)\n"}
+,{"stream_name":"stdout","time":50.460533961,"data":"\n"}
+,{"stream_name":"stdout","time":50.460553774,"data":"===== DETECTOR =====\n"}
+,{"stream_name":"stdout","time":50.460557978,"data":"Đang nạp ảnh...\n"}
+,{"stream_name":"stdout","time":114.472014997,"data":"Số box train mỗi lớp: {'bottle': 4629, 'cup': 4561, 'phone': 4570, 'book': 4190, 'mouse': 4413, 'box': 4099, 'toy_car': 4554}\n"}
+,{"stream_name":"stdout","time":114.524175869,"data":"Train 4800 | Val 1200 | Test 4000 | đầu vào 320x240 | nạp mất 64s\n"}
+,{"stream_name":"stdout","time":119.401188981,"data":"Số tham số: 196,307 (giới hạn 200,000)\n"}
+,{"stream_name":"stdout","time":412.614138262,"data":"  epoch   5: loss 2.655 | val mAP50 0.000  \u003c- tốt nhất, đã lưu | 58.6s/epoch, tối đa còn ~5 phút\n"}
+,{"stream_name":"stdout","time":671.275695175,"data":"  epoch  10: loss 1.883 | val mAP50 0.000  \u003c- tốt nhất, đã lưu | 55.2s/epoch, tối đa còn ~0 phút\n"}
+,{"stream_name":"stdout","time":671.279015977,"data":"Train xong sau 9.2 phút. Tốt nhất: epoch 10, val mAP50 0.000\n"}
+,{"stream_name":"stdout","time":671.98857714,"data":"BENCHMARK XONG\n"}
+,{"stream_name":"stderr","time":679.260026811,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":679.260065705,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":679.528372215,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":679.528412778,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":680.769034834,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":681.618741062,"data":"[NbConvertApp] Writing 554940 bytes to __results__.html\n"}
+]

@@ -1,0 +1,18 @@
+{
+  "id": "dohuuminhtri/edgeai-exp-bakd2",
+  "title": "edgeai exp bakd2",
+  "code_file": "edgeai_kaggle.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "enable_internet": false,
+  "competition_sources": [
+    "egde-ai-challenge-2026-lan-2-qualifiers"
+  ],
+  "dataset_sources": [
+    "dohuuminhtri/edgeai-teacher-s4"
+  ],
+  "kernel_sources": []
+}

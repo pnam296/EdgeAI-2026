@@ -1,0 +1,16 @@
+{
+  "id": "phngnam296/edgeai-exp-final-lr3ep240",
+  "title": "edgeai exp final-lr3ep240",
+  "code_file": "edgeai_kaggle.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "enable_internet": false,
+  "competition_sources": [
+    "egde-ai-challenge-2026-lan-2-qualifiers"
+  ],
+  "dataset_sources": [],
+  "kernel_sources": []
+}
