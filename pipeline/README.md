@@ -41,12 +41,19 @@ câu hỏi ──► chuẩn hóa ──► 24 token ──► TextCNN (18k tham
 
 ## Chạy lại
 
-`pipeline.ipynb` chạy từ trên xuống. Chọn chế độ ở ô **Cấu hình**:
+Có 2 notebook, cùng cấu trúc, chạy từ trên xuống:
+
+| Notebook | Detection | Bài nộp | mAP val |
+|---|---|---|---|
+| `pipeline.ipynb` | trò + distill từ thầy (bài chính thức) | 99,021 | 0,9819 |
+| `pipeline_student.ipynb` | trò tự học, không thầy, không distill | 98,932 | 0,9812 |
+
+Chọn chế độ ở ô **Cấu hình**:
 
 | `MODE` | Làm gì | Thời gian |
 |---|---|---|
 | `"infer"` (mặc định) | Nạp trọng số đã nộp trong `weights/`, chấm mAP val, dự đoán 4.000 ảnh test, ghép intent -> `submission.csv` | khoảng 2 phút có GPU |
-| `"train"` | Train lại từ đầu: thầy 200 epoch -> trò distill (dừng ở epoch 232/300 như bài nộp) -> TextCNN -> `submission.csv` | ước tính 5–7 giờ trên T4 (chưa đo trên Kaggle) |
+| `"train"` | Train lại từ đầu -> TextCNN -> `submission.csv`. `pipeline.ipynb`: thầy 200 epoch -> trò distill (dừng ở epoch 232/300 như bài nộp). `pipeline_student.ipynb`: trò dừng ở epoch 290/300 như bài nộp | `pipeline.ipynb` đo trên Kaggle T4: 3,2 giờ (thầy 94 phút, trò 96 phút), mAP val 0,9828 |
 
 `QUICK_TEST = True` chạy thử toàn bộ chế độ `train` với 200 ảnh, 2 epoch, xong trong vài phút.
 
@@ -58,7 +65,7 @@ câu hỏi ──► chuẩn hóa ──► 24 token ──► TextCNN (18k tham
    - Bật **Internet**, đặt `REPO_URL = "<link git của repo này>"` ở ô Cấu hình. Notebook sẽ tự clone.
    - Hoặc tải thư mục này lên làm Kaggle Dataset rồi **Add Input**. Notebook tự tìm trong `/kaggle/input`.
 4. Accelerator **GPU T4**, Internet bật nếu môi trường chưa có `ultralytics` (notebook tự `pip install ultralytics==8.4.199`).
-5. **Run All**. Kết quả nằm ở `/kaggle/working/out/submission.csv`.
+5. **Run All**. Kết quả nằm ở `/kaggle/working/submission.csv`. Trọng số và log train nằm ở `/kaggle/working/out/`.
 
 ### Máy cá nhân / Colab
 
@@ -158,7 +165,8 @@ mAP@0.5 trên 1.200 ảnh val (`SPLIT_SEED = 42`), cùng một hàm tính:
 ## Cấu trúc
 
 ```
-pipeline.ipynb              train + dự đoán + submission.csv (chạy từ trên xuống)
+pipeline.ipynb              trò + distill: train + dự đoán + submission.csv (chạy từ trên xuống)
+pipeline_student.ipynb      trò tự học, không distill
 requirements.txt
 yolo_cfg/
   student_p2p4.yaml         trò, 191.145 tham số (bài nộp)
@@ -166,6 +174,7 @@ yolo_cfg/
 weights/
   yolo_kd_student.pt        trọng số trò đã nộp (checkpoint epoch 232, đã bỏ optimizer)
   yolo_teacher.pt           trọng số thầy (dùng khi muốn distill lại mà không train thầy)
+  yolo_student.pt           trọng số trò tự học đã nộp (checkpoint epoch 290, đã bỏ optimizer)
   intent_textcnn.keras      TextCNN đã nộp
   intent_vocab.txt          vocab của TextCNN (dòng k = token id k; 0 = pad, 1 = từ lạ)
 outputs/                    kết quả khi chạy (không đưa lên git)
