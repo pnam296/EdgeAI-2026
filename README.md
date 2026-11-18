@@ -1,33 +1,38 @@
 # Edge AI Challenge 2026 – Vòng loại
 
-Detector vật thể tí hon (CenterNet + MobileNetV2) và phân loại intent (TextCNN) cho cuộc thi
+Detector vật thể tí hon và phân loại intent (TextCNN) cho cuộc thi
 [EDGE AI CHALLENGE 2026 LẦN 2 – Qualifiers](https://www.kaggle.com/competitions/egde-ai-challenge-2026-lan-2-qualifiers).
+Detector có hai nhánh: **YOLO11 P2/P3/P4 tự thiết kế** (`yolo_tiny.py`, PyTorch/Ultralytics, bài chính thức) và
+CenterNet + MobileNetV2 (`edgeai_float.py`, TensorFlow, nhánh cũ).
 Hạn nộp: **18/11/2026**.
 
 ## Tình trạng hiện tại
 
 | | |
 |---|---|
-| Điểm public tốt nhất | **98,217** (run `final-ep300`: s4 + LR 3e-3 + 300 epoch + TRAIN_ON_ALL, nộp 16/11/2026) |
-| mAP50 val detection | 0,972 (float, run `lr3ep240`, train/val split) |
-| Intent | accuracy 1,0 trên holdout, đã đạt tối đa |
-| Mốc (cấu hình đang giữ) | `edgeai_float.py`: 320×240, ALPHA 0.45, STRIDE4, LR 3e-3, 196.307 tham số |
-| Mục tiêu | ~~98 điểm~~ ✅ **ĐÃ ĐẠT** (98,217) |
-| Tổng giờ GPU | 92,3 giờ (Kaggle T4 + Colab) |
+| Điểm public tốt nhất | **99,021** (run `yolo-kd`: YOLO P2P4 191k tham số + distill từ thầy tự train, epoch 232, nộp 18/11/2026 01:22) -> **bài chính thức** |
+| Dự phòng | `yolo-student` (cùng kiến trúc, không distill) 98,932 · TF tốt nhất `final-ep400` 98,232 |
+| mAP50 val detection | 0,982 (`yolo-kd`, train/val split, hàm mAP của `edgeai_float.py`) · TF tốt nhất 0,972 (`lr3ep240`) |
+| Intent | accuracy 1,0 trên holdout, đã đạt tối đa (bài YOLO dùng lại intent của `final-ep400`) |
+| Mốc (cấu hình đang giữ) | `yolo_tiny.py` + `yolo_cfg/student_p2p4.yaml`: 320×240, 191.145 tham số, thầy `yolo_cfg/teacher_p2p4.yaml` |
+| Mục tiêu | ~~98 điểm~~ ✅ **ĐÃ ĐẠT** · ~~99 điểm~~ ✅ **ĐÃ ĐẠT** (99,021) |
+| Tổng giờ GPU | 99,1 giờ Kaggle T4 + Colab (nhánh TF) + khoảng 5,5 giờ RTX 5060 máy nhà (nhánh YOLO) |
+| Chưa làm | xuất TFLite INT8 / kiểm tra op TFLite Micro cho model YOLO (cần khi vào chung kết) |
 
 **Công thức điểm** (đã khớp với điểm public): `điểm = 0,7 × mAP50 detection × 100 + 30 × accuracy intent`.
-mAP trên tập public thường thấp hơn mAP val khoảng 0,002.
+Nhánh TF: mAP trên tập public thường thấp hơn mAP val khoảng 0,002. Nhánh YOLO thì ngược lại: public cao hơn val
+khoảng 0,004 (`yolo-kd`: val 0,982, public ≈ 0,986).
 
 ## Ràng buộc vòng loại
 
 | Hạng mục | Giới hạn | Mốc hiện tại |
 |---|---|---|
 | Đầu vào | ≤ 320×240 | 320×240 |
-| Số tham số detector | ≤ 200.000 | 184.723 |
-| Dung lượng model | ≤ 1,5 MB | khoảng 1.090 KB (trọng số float32) |
+| Số tham số detector | ≤ 200.000 | 191.145 (`yolo-kd`) |
+| Dung lượng model | ≤ 1,5 MB | khoảng 747 KB (191.145 × 4 byte float32) |
 | Lượng tử hóa INT8 | **không bắt buộc ở vòng loại** (thông báo BTC 11/11/2026) | dùng model float |
 | TTA (chạy model nhiều lần/ảnh, vd lật ngang) | **không được dùng** | 1 lần chạy/ảnh |
-| Pretrained / dữ liệu ngoài | **chỉ được dùng ở vòng chung kết** | train từ đầu (`PRETRAINED = False`, `KD_WEIGHT = 0`) |
+| Pretrained / dữ liệu ngoài | **chỉ được dùng ở vòng chung kết** | train từ đầu (YOLO dựng từ yaml, `pretrained=False`; TF `PRETRAINED = False`) |
 | Ensemble nhiều model | **không được dùng** | nộp 1 model |
 | Distillation | được, nhưng thầy phải train từ đầu trên dữ liệu BTC | xem mục Kế hoạch |
 
@@ -37,7 +42,13 @@ mAP trên tập public thường thấp hơn mAP val khoảng 0,002.
 ## Cấu trúc thư mục
 
 ```
-edgeai_float.py            ★ SCRIPT MỐC: train detector + intent + tạo submission.csv (float, 1 file)
+yolo_tiny.py               ★ BÀI CHÍNH THỨC: detector YOLO P2P4 (Ultralytics) train từ đầu trên máy có GPU,
+                             distill từ thầy tự train, ghép intent từ bài cũ -> submission.csv
+yolo_cfg/
+  student_p2p4.yaml        trò 191.145 tham số (đầu ra P2/4, P3/8, P4/16, bỏ P5, SCDown, reg_max 4)
+  teacher_p2p4.yaml        thầy 2,58 triệu tham số (KHÔNG nộp, chỉ để distill), cùng bố cục đầu ra
+outputs/yolo_tiny/<RUN>/   kết quả YOLO trên máy (KHÔNG có trên git): weights/, submission_*.csv
+edgeai_float.py            nhánh TF: train detector + intent + tạo submission.csv (float, 1 file)
 predict_float.py           dự đoán lại bằng model .keras đã train -> submission_float.csv (không cần GPU)
 requirements.txt           thư viện Python
 kaggle_runs/
@@ -159,6 +170,24 @@ Luôn ghi kết luận vào cột `ghi_chu`: **GIỮ** hoặc **KHÔNG GIỮ**, 
 **Quy tắc giữ:** so mAP val của run với mốc. Chênh lệch dưới khoảng ±0,003 coi như nhiễu, không giữ,
 trừ khi lớp yếu nhất (toy_car, mouse) tăng rõ.
 
+### Nhánh YOLO (`yolo_tiny.py`, chạy trên máy có GPU)
+
+Cần PyTorch có CUDA và `ultralytics`. Trên Windows, TensorFlow chỉ chạy CPU, còn PyTorch dùng được GPU.
+Train lâu thì chạy trong cửa sổ PowerShell riêng và chỉ một run một lúc, vì máy ít RAM. Tham số dạng `KEY=VALUE`
+sẽ ghi đè cấu hình ở đầu file.
+
+```powershell
+.\Scripts\python.exe yolo_tiny.py PREP_ONLY=True                       # tạo dữ liệu kiểu Ultralytics (1 lần)
+.\Scripts\python.exe yolo_tiny.py RUN='teacher' MODEL_CFG='yolo_cfg/teacher_p2p4.yaml' TEACHER_MODE=True EPOCHS=200
+.\Scripts\python.exe yolo_tiny.py RUN='student' EPOCHS=300             # trò không distill (đối chứng)
+.\Scripts\python.exe yolo_tiny.py RUN='kd' TEACHER='outputs/yolo_tiny/teacher/weights/best.pt' EPOCHS=300
+```
+
+Kết quả nằm trong `outputs/yolo_tiny/<RUN>/`. mAP val được tính bằng đúng hàm của `edgeai_float.py` trên cùng tập
+val (seed 42), nên so trực tiếp được với nhánh TF. Phần INTENT lấy từ `REF_SUB`
+(`kaggle_runs/final-ep400/output/submission.csv`). Ghi kết quả vào `results.csv` với mã `yolo-<RUN>`, cột `gpu` ghi
+`local ...`, để trống `gio_gpu` (không tính vào quota Kaggle).
+
 ### 4. Nộp bài
 
 ```bash
@@ -208,14 +237,29 @@ git push
 | **s4** | **thêm tầng stride 4 (lưới 80x60), 196.307 tham số** | **float 0,966** | **giữ, mốc hiện tại: cả 7 lớp tăng, toy_car +0,011** |
 | pre35 | backbone ImageNet alpha 0.35 + stride 4, 138.611 tham số | float 0,967 | **không dùng ở vòng loại (cấm pretrained)**; ngang s4 với ít hơn 58k tham số -> để dành cho chung kết |
 | (thử trên máy) | TTA lật ngang trên A45-noaug | 0,9645 | **không dùng: thể lệ cấm TTA** |
+| bakd, tkd, tkd2 | distill từ thầy TF tự train (s4 / tbig 0,975) | 0,965–0,966 | không giữ (nhiễu) |
+| giou, boxw2, wh3, nb1, ema, mosaic | chỉnh loss box, EMA, mosaic | 0,964–0,967 | không giữ |
+| lr3 / ep240 | LR 3e-3 / 240 epoch | 0,970 / 0,971 | giữ |
+| **lr3ep240** | **LR 3e-3 + 240 epoch** | **0,972** | **giữ, mốc TF tốt nhất** |
+| final-ep300 / final-ep400 | lr3 + TRAIN_ON_ALL, 300 / 450 epoch | (giả) | public 98,217 / **98,232** (TF cao nhất) |
+| yolo-teacher | YOLO P2P4 2,58M tham số, thầy | 0,987 | không nộp, chỉ để distill |
+| yolo-student | YOLO P2P4 191k tham số, không distill | 0,981 | public 98,932 |
+| **yolo-kd** | **YOLO P2P4 191k + distill từ yolo-teacher** | **0,982** | **public 99,021, bài chính thức** |
 
 Kinh nghiệm rút ra:
+- **Đổi sang YOLO P2/P3/P4 là bước nhảy lớn nhất (+0,009 val so lr3ep240)**: một nửa số lỗi của model TF nằm ở
+  vật nhỏ < 24 px; đầu ra P2 (stride 4) cộng gán nhãn/loss của YOLO xử lý được. Bỏ P5 để stride lớn nhất là 16 ->
+  ảnh 320×240 đưa thẳng vào model, không phải đệm. toy_car tăng nhiều nhất (+0,026).
+- Distill YOLO chỉ thêm +0,0006 val (nhiễu), nhưng public cao hơn bản không distill 0,09 điểm.
 - Độ phân giải đầu vào và độ rộng backbone (ALPHA) là hai đòn bẩy lớn nhất.
 - Thay đổi augment, cách gán nhãn hay lịch học gần như không tác dụng.
 - Tắt augment ở cuối không giúp gì: epoch tốt nhất của A45-noaug là 135, trước lúc tắt augment.
 - Distill chỉ heatmap không giúp. AP@0.3 cao hơn AP@0.5 rõ ở toy_car/phone -> nút thắt là định vị box.
 
 ## Kế hoạch vòng loại (cập nhật 13/11/2026)
+
+> **18/11: kế hoạch dưới đây (nhánh TF) đã làm xong.** Bài chính thức hiện là `yolo-kd` (YOLO P2P4, 99,021), xem
+> mục Tình trạng hiện tại. Phần dưới giữ lại để tham khảo.
 
 Cần thêm khoảng **+0,005 mAP** so với s4 (0,966 -> ~0,971) để lên 98 điểm.
 
@@ -292,6 +336,9 @@ Trò = đúng kiến trúc s4, train lại từ đầu 160 epoch, thầy = trọ
 **Bước 4 – nộp.**
 > 14/11: đã nộp `final-s4` (s4 + TRAIN_ON_ALL, `kaggle_runs/final-s4`) -> **public 97,781** -> chọn làm bài chính thức.
 > Từ giờ nộp luôn ghi mô tả (`-m "<mã run>"`) để biết bài nào là run nào.
+> 16–17/11: `final-ep300` 98,217, `final-cw` 98,068, `final-ep400` (450 epoch) **98,232** = cao nhất nhánh TF.
+> 18/11: chuyển sang YOLO. `yolo-kd` (`outputs/yolo_tiny/kd/submission_kd_ep232.csv`, trọng số `last.pt` epoch 232)
+> đạt **public 99,021**, `yolo-student` đạt 98,932 -> **chọn `yolo-kd` làm bài chính thức**.
 - Nộp `final`. Nếu điểm public **thấp hơn** bản đang có (97,2 của A45-float) -> chọn lại bản cũ làm bài chính thức.
 - Luôn giữ 1 bản dự phòng đã nộp được (`s4` hoặc `A45-float`).
 - Không có gì cải thiện ở Bước 1–2 -> nộp **s4 + TRAIN_ON_ALL**.
