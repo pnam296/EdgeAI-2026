@@ -1,0 +1,49 @@
+[{"stream_name":"stderr","time":6.494466286,"data":"0.00s - Debugger warning: It seems that frozen modules are being used, which may\n"}
+,{"stream_name":"stderr","time":6.494509338,"data":"0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off\n"}
+,{"stream_name":"stderr","time":6.494513227,"data":"0.00s - to python to disable frozen modules.\n"}
+,{"stream_name":"stderr","time":6.494515771,"data":"0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.\n"}
+,{"stream_name":"stderr","time":7.04426222,"data":"0.00s - Debugger warning: It seems that frozen modules are being used, which may\n"}
+,{"stream_name":"stderr","time":7.044289604,"data":"0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off\n"}
+,{"stream_name":"stderr","time":7.044295412,"data":"0.00s - to python to disable frozen modules.\n"}
+,{"stream_name":"stderr","time":7.044299692,"data":"0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.\n"}
+,{"stream_name":"stdout","time":19.293065816,"data":"Creating new Ultralytics Settings v0.0.8 file ✅ \n"}
+,{"stream_name":"stdout","time":19.293094018,"data":"View Ultralytics Settings with 'yolo settings' or at '/root/.config/Ultralytics/settings.json'\n"}
+,{"stream_name":"stdout","time":19.293097553,"data":"Update Settings with 'yolo settings key=value', i.e. 'yolo settings runs_dir=path/to/dir'. For help see https://docs.ultralytics.com/usage/settings\n"}
+,{"stream_name":"stdout","time":29.200824278,"data":"MODE infer | QUICK_TEST False | TRAIN_ON_ALL False\n"}
+,{"stream_name":"stdout","time":29.200851287,"data":"Pipeline: /kaggle/input/datasets/phngnam296/edgeai-pipeline-files\n"}
+,{"stream_name":"stdout","time":29.20085578,"data":"Dữ liệu:  /kaggle/input/competitions/egde-ai-challenge-2026-lan-2-qualifiers\n"}
+,{"stream_name":"stdout","time":29.200859956,"data":"Kết quả:  /kaggle/working/out\n"}
+,{"stream_name":"stdout","time":29.200863207,"data":"Ultralytics 8.4.199 | torch 2.11.0+cu130 | GPU: Tesla T4\n"}
+,{"stream_name":"stdout","time":29.200866609,"data":"Lớp: ['bottle', 'cup', 'phone', 'book', 'mouse', 'box', 'toy_car']\n"}
+,{"stream_name":"stdout","time":33.734004425,"data":"train 4800 ảnh | val 1200 ảnh\n"}
+,{"stream_name":"stdout","time":33.779413807,"data":"Trọng số dùng để dự đoán: /kaggle/input/datasets/phngnam296/edgeai-pipeline-files/weights/yolo_kd_student.pt\n"}
+,{"stream_name":"stdout","time":37.736370151,"data":"Số tham số: 191,145 (\u003c= 200,000) OK\n"}
+,{"stream_name":"stdout","time":37.736408264,"data":"Trọng số float32: 747 KB (\u003c= 1536 KB) OK\n"}
+,{"stream_name":"stdout","time":37.736414194,"data":"Đầu vào 1x3x240x320 -\u003e đầu ra (1, 11, 6300) (4 box + 7 lớp, 6300 anchor P2/P3/P4)\n"}
+,{"stream_name":"stdout","time":64.26760012,"data":"mAP50 val yolo_kd_student.pt: 0.9819 | bottle 0.987 cup 0.989 phone 0.975 book 0.972 mouse 0.978 box 0.989 toy_car 0.983\n"}
+,{"stream_name":"stdout","time":151.545629964,"data":"Test: 4000 ảnh, 99770 box, 87s\n"}
+,{"stream_name":"stderr","time":163.476557488,"data":"WARNING: All log messages before absl::InitializeLog() is called are written to STDERR\n"}
+,{"stream_name":"stderr","time":163.476585126,"data":"I0000 00:00:1794965241.614125      23 cudart_stub.cc:31] Could not find cuda drivers on your machine, GPU will not be used.\n"}
+,{"stream_name":"stderr","time":163.679119113,"data":"WARNING: All log messages before absl::InitializeLog() is called are written to STDERR\n"}
+,{"stream_name":"stderr","time":163.679143879,"data":"I0000 00:00:1794965241.614125      23 cudart_stub.cc:31] Could not find cuda drivers on your machine, GPU will not be used.\n"}
+,{"stream_name":"stderr","time":163.679160456,"data":"\n"}
+,{"stream_name":"stderr","time":163.679164258,"data":"WARNING: All log messages before absl::InitializeLog() is called are written to STDERR\n"}
+,{"stream_name":"stderr","time":163.679167981,"data":"I0000 00:00:1794965241.614125      23 cudart_stub.cc:31] Could not find cuda drivers on your machine, GPU will not be used.\n"}
+,{"stream_name":"stdout","time":167.236895569,"data":"TextCNN: 18,213 tham số | vocab 263\n"}
+,{"stream_name":"stdout","time":168.299305892,"data":"Phân bố dự đoán test: {'OUT_OF_SCOPE': 801, 'LIST': 800, 'COUNT': 800, 'LOCATION': 800, 'EXIST': 799}\n"}
+,{"stream_name":"stdout","time":169.173106539,"data":"Detection 4000 ảnh | Intent 4000 câu\n"}
+,{"stream_name":"stdout","time":169.173138345,"data":"OK - file hợp lệ: /kaggle/working/out/submission.csv\n"}
+,{"stream_name":"stdout","time":169.189793562,"data":"MODE infer\n"}
+,{"stream_name":"stdout","time":169.189814339,"data":"Detection: yolo_kd_student.pt | 191,145 tham số | 747 KB float32 | đầu vào 320x240\n"}
+,{"stream_name":"stdout","time":169.189819653,"data":"mAP50 val: 0.9819\n"}
+,{"stream_name":"stdout","time":169.189823129,"data":"Intent: TextCNN 18,213 tham số\n"}
+,{"stream_name":"stdout","time":169.189826704,"data":"Kết quả: /kaggle/working/out/submission.csv\n"}
+,{"stream_name":"stderr","time":174.723843179,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":174.723869824,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":174.868412277,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":174.868435968,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":175.646298251,"data":"[NbConvertApp] Converting notebook __notebook__.ipynb to notebook\n"}
+,{"stream_name":"stderr","time":175.726377316,"data":"[NbConvertApp] Writing 41605 bytes to __notebook__.ipynb\n"}
+,{"stream_name":"stderr","time":178.212932563,"data":"[NbConvertApp] Converting notebook __notebook__.ipynb to html\n"}
+,{"stream_name":"stderr","time":178.823311067,"data":"[NbConvertApp] Writing 425944 bytes to __results__.html\n"}
+]

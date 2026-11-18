@@ -9,7 +9,7 @@ Phát hiện đồ vật (**YOLO P2/P3/P4 tự thiết kế, 191.145 tham số, 
 | Bài nộp chính thức | **public 99,021** (`submission_kd_ep232.csv`, nộp 18/11/2026) |
 | Detection | mAP@0.5 val **0,9819** (1.200 ảnh tách từ train), model float, 1 lần chạy/ảnh |
 | Intent | accuracy 1,0 trên 20% câu train giữ lại |
-| Tái lập | `MODE = "infer"` tạo lại file **giống hệt từng byte** bài đã nộp (MD5 `4d21be92a28705e98c736b85f671517d`) |
+| Tái lập | `MODE = "infer"` trên máy đã train: file **giống hệt từng byte** bài đã nộp (MD5 `4d21be92a28705e98c736b85f671517d`). Trên Kaggle T4: cùng mAP val 0,9819, intent trùng 4.000/4.000, score box chỉ lệch ở số lẻ do khác GPU |
 
 ```
 ảnh 320×240 RGB ──► YOLO P2P4 (191k tham số) ──► 6.300 anchor × (4 box + 7 lớp) ──► NMS 0,7 ──► ≤ 100 box
@@ -72,7 +72,8 @@ Notebook tự tìm dữ liệu (thư mục có `classes.txt`) trong `/kaggle/inp
 Có thể đặt thẳng bằng `DATA_DIR`. Kết quả ghi vào `outputs/`.
 
 > Huấn luyện YOLO trên GPU không cho ra kết quả giống hệt từng bit giữa các lần chạy, nên chế độ `train` cho mAP val
-> lệch khoảng ±0,002 quanh 0,982. Chế độ `infer` thì cho ra file giống hệt.
+> lệch khoảng ±0,002 quanh 0,982. Chế độ `infer` cho cùng mAP val; trên GPU khác, vài score box có thể lệch ở chữ
+> số cuối.
 
 ## Pipeline
 
