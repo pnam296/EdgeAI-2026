@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ESP32-S3 Infer</title>
+<style>
+  :root { --bg:#f4f5f7; --card:#fff; --fg:#1d2330; --mute:#667085; --line:#d9dde3; --acc:#1f6feb; --media:#e9ecf0;
+          --ok:#1a7f37; --warn:#b54708; --bad:#c62828; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.45 system-ui, sans-serif; background:var(--bg); color:var(--fg); }
+  main { max-width:1440px; margin:0 auto; padding:16px; display:grid; gap:16px; grid-template-columns:1fr; }
+  @media (min-width: 1000px) { main { grid-template-columns: repeat(3, minmax(0, 1fr)); } .wide { grid-column: 1 / -1; } }
+  header { grid-column:1/-1; display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 16px; }
+  h1 { font-size:18px; margin:0; }
+  header .msg { margin:0; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:14px; display:flex; flex-direction:column; min-width:0; }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--mute); margin:0 0 10px; }
+  .media { display:block; width:100%; aspect-ratio:4/3; object-fit:contain; background:var(--media); border-radius:6px; }
+  .media-box { position:relative; }
+  #camBox { aspect-ratio:4/3; background:var(--media); border-radius:6px; }
+  #camBox > .media { position:absolute; inset:0; height:100%; }
+  .media-box > .hint { position:absolute; inset:0; display:grid; place-items:center; color:var(--mute); font-size:13px; pointer-events:none; }
+  label { display:block; font-size:13px; color:var(--mute); margin:12px 0 4px; }
+  input[type=text], input[type=number], textarea { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:6px; font:inherit; background:#fff; color:inherit; }
+  textarea { min-height:7.5em; resize:vertical; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; align-items:center; }
+  button { padding:9px 18px; border:0; border-radius:6px; background:var(--acc); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--acc); border:1px solid var(--line); }
+  button:disabled { opacity:.5; cursor:default; }
+  .msg { font-size:13px; color:var(--mute); margin-top:8px; min-height:1.4em; }
+  .err { color:var(--bad) !important; }
+  .kv { display:grid; grid-template-columns:auto 1fr; gap:4px 12px; margin:12px 0; }
+  .kv b { font-weight:600; }
+  .total { font-size:28px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .total.ok { color:var(--ok); } .total.warn { color:var(--warn); } .total.bad { color:var(--bad); }
+  .sub { font-size:13px; color:var(--mute); font-variant-numeric:tabular-nums; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  td, th { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--mute); font-weight:500; }
+  td.num { font-variant-numeric:tabular-nums; }
+  .sw { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:middle; }
+  .params { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; }
+  .params label { margin-top:4px; }
+  #qlist { list-style:none; margin:8px 0 0; padding:0; display:grid; gap:4px; }
+  #qlist li { padding:6px 8px; border:1px solid var(--line); border-radius:6px; cursor:pointer; display:flex; gap:8px; }
+  #qlist li:hover { border-color:var(--acc); }
+  #qlist li.cur { border-color:var(--acc); background:#eef4ff; }
+  #qlist li.done { color:var(--mute); }
+  #qlist li span:first-child { color:var(--mute); min-width:1.6em; font-variant-numeric:tabular-nums; }
+  .scroll { overflow-x:auto; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>ESP32-S3 · Detection + Intent</h1>
+    <p class="msg" id="info"></p>
+  </header>
+
+  <section>
+    <h2>Đầu vào</h2>
+    <label for="q">Câu hỏi (Enter = chạy)</label>
+    <input id="q" type="text" placeholder="VD: Có bao nhiêu cái cốc trong ảnh?" autocomplete="off">
+    <div class="row">
+      <button id="runCam" disabled>Run camera</button>
+      <button id="run" class="ghost" disabled>Run ảnh tải lên</button>
+    </div>
+    <div class="msg" id="status" role="status"></div>
+    <label for="file">Ảnh tải lên (thử khi chưa có camera)</label>
+    <input id="file" type="file" accept="image/*">
+    <div class="media-box" style="margin-top:8px">
+      <canvas id="orig" class="media" role="img" aria-label="Ảnh tải lên"></canvas>
+      <div class="hint" id="origHint">Chưa có ảnh</div>
+    </div>
+    <details style="margin-top:12px">
+      <summary class="sub">Ngưỡng (đổi không cần nạp lại firmware)</summary>
+      <div class="params">
+        <div><label for="conf">conf</label><input id="conf" type="number" step="0.05" min="0.05" max="0.95"></div>
+        <div><label for="iou">NMS IoU</label><input id="iou" type="number" step="0.05" min="0.1" max="0.95"></div>
+        <div><label for="agn">NMS chung lớp</label><input id="agn" type="number" step="1" min="0" max="1"></div>
+      </div>
+    </details>
+  </section>
+
+  <section>
+    <h2>Camera</h2>
+    <div class="media-box" id="camBox">
+      <div class="hint" id="camHint">Chưa có hình</div>
+    </div>
+    <div class="row">
+      <button id="camOn" class="ghost">Stream</button>
+      <button id="camOff" class="ghost">Stop</button>
+      <button id="saveFrame" class="ghost" disabled title="Lưu đúng khung 320×240 model vừa thấy (PNG)">Lưu khung model</button>
+    </div>
+    <div class="msg" id="camMsg" role="status"></div>
+    <h2 style="margin-top:12px">Bộ câu hỏi</h2>
+    <textarea id="qbank" placeholder="Dán 10 câu hỏi BTC cho trước, mỗi dòng 1 câu. Bấm vào câu để chọn."></textarea>
+    <ol id="qlist"></ol>
+  </section>
+
+  <section>
+    <h2>Kết quả</h2>
+    <div class="media-box">
+      <canvas id="cv" class="media" role="img" aria-label="Ảnh kết quả có bounding box"></canvas>
+      <div class="hint" id="cvHint">Chưa chạy</div>
+    </div>
+    <div class="kv">
+      <span>Detect + Intent</span><span><span class="total" id="total">–</span></span>
+      <span></span><span class="sub" id="time">–</span>
+      <span>Câu hỏi</span><b id="qEcho">–</b>
+      <span>Intent</span><b id="intent">–</b>
+      <span>Trả lời</span><b id="answer">–</b>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Đối tượng</th><th>Score</th><th>Vị trí (x1, y1, x2, y2)</th></tr></thead>
+      <tbody id="list"><tr><td colspan="4">Chưa chạy</td></tr></tbody>
+    </table>
+  </section>
+
+  <section class="wide">
+    <h2>Lịch sử</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>#</th><th>Nguồn</th><th>Câu hỏi</th><th>Intent</th><th>Trả lời</th><th>Đối tượng</th><th>Detect+Intent</th><th>Cả vòng</th></tr></thead>
+        <tbody id="hist"><tr><td colspan="8">Chưa có</td></tr></tbody>
+      </table>
+    </div>
+    <div class="row"><button id="csv" class="ghost">Tải CSV</button><span class="sub" id="avg"></span></div>
+  </section>
+</main>
+<script>
+const W = 320, H = 240, LIMIT_MS = 5000;
+const COLORS = ['#e6194b','#3cb44b','#4363d8','#f58231','#911eb4','#0e9fb8','#f032e6'];
+const NAMES = ['bottle','cup','phone','book','mouse','box','toy_car'];
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+let upImg = null;            // anh tai len
+const frame = document.createElement('canvas'); frame.width = W; frame.height = H;   // khung model vua chay
+const history = [];
+const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } },
+                set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
+
+const say = (id, t, err) => { $(id).className = err ? 'msg err' : 'msg'; $(id).textContent = t; };
+// vocab TextCNN la tieng Viet khong dau
+const strip = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D')
+  .replace(/[^\x20-\x7e]/g, ' ').slice(0, 500);
+const qs = () => '?' + ['conf', 'iou', 'agn'].filter(k => $(k).value !== '').map(k => `${k}=${+$(k).value}`).join('&');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+let streamPort = 81;
+fetch('/info').then(r => r.json()).then(i => {
+  for (const k of ['conf', 'iou', 'agn']) if ($(k).value === '') $(k).value = i[k];
+  $('info').textContent = `Head ${i.det} · conf ${i.conf} · IoU ${i.iou} · ${i.cam ? 'có camera' : 'không có camera'}` +
+    (i.psram_free_kb != null ? ` · PSRAM trống ${i.psram_free_kb} KB` : '') + (i.mock ? ' · ESP GIẢ LẬP trên PC' : '');
+  $('runCam').disabled = !i.cam;
+  if (i.stream_port) streamPort = i.stream_port;
+}).catch(() => say('info', 'Không đọc được /info', true)).finally(() => $('camOn').onclick());
+
+function draw(src, dets) {
+  $('cvHint').hidden = true;
+  cv.width = 640; cv.height = 480;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(src, 0, 0, cv.width, cv.height);
+  ctx.lineWidth = 3; ctx.font = 'bold 16px system-ui';
+  for (const d of dets || []) {
+    const col = COLORS[NAMES.indexOf(d.c) % COLORS.length];
+    const [x1, y1, x2, y2] = [d.b[0]*cv.width, d.b[1]*cv.height, d.b[2]*cv.width, d.b[3]*cv.height];
+    ctx.strokeStyle = ctx.fillStyle = col;
+    ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+    const t = `${d.c} ${d.s.toFixed(2)}`, tw = ctx.measureText(t).width + 8;
+    ctx.fillRect(x1, Math.max(0, y1 - 20), tw, 20);
+    ctx.fillStyle = '#fff'; ctx.fillText(t, x1 + 4, Math.max(15, y1 - 5));
+  }
+}
+
+function show(j, roundTrip) {
+  const t = $('total');
+  t.textContent = `${j.ms_total} ms`;
+  t.className = 'total ' + (j.ms_total < LIMIT_MS * 0.6 ? 'ok' : j.ms_total < LIMIT_MS ? 'warn' : 'bad');
+  $('time').textContent = `detect ${j.ms_det} ms (invoke ${j.ms_invoke}) · intent ${j.ms_intent} ms` +
+    (j.src === 'camera' ? ` · chụp ${j.ms_cap} ms` : '') + ` · cả vòng ${roundTrip} ms · conf ${j.conf}`;
+  $('qEcho').textContent = j.q || '–';
+  $('intent').textContent = j.intent || '–';
+  $('answer').textContent = j.answer || '–';
+  $('list').innerHTML = j.dets.length ? '' : '<tr><td colspan="4">Không phát hiện đối tượng</td></tr>';
+  j.dets.forEach((d, i) => {
+    const tr = $('list').insertRow();
+    tr.insertCell().textContent = i + 1;
+    tr.insertCell().innerHTML = `<span class="sw" style="background:${COLORS[NAMES.indexOf(d.c)]}"></span>${esc(d.c)}`;
+    const s = tr.insertCell(); s.className = 'num'; s.textContent = d.s.toFixed(3);
+    const b = tr.insertCell(); b.className = 'num'; b.textContent = d.b.map(v => v.toFixed(2)).join(', ');
+  });
+  history.unshift({ ...j, roundTrip, when: new Date().toLocaleTimeString() });
+  renderHistory();
+}
+
+function renderHistory() {
+  const tb = $('hist'); tb.innerHTML = '';
+  history.forEach((h, i) => {
+    const tr = tb.insertRow();
+    const objs = Object.entries(h.dets.reduce((a, d) => (a[d.c] = (a[d.c] || 0) + 1, a), {})).map(([k, v]) => `${v} ${k}`).join(', ');
+    for (const v of [history.length - i, h.src, h.q, h.intent, h.answer, objs || '–', `${h.ms_total} ms`, `${h.roundTrip} ms`])
+      tr.insertCell().textContent = v;
+  });
+  const n = history.length;
+  $('avg').textContent = n ? `Trung bình ${n} lần: detect+intent ${Math.round(history.reduce((a, h) => a + h.ms_total, 0) / n)} ms` : '';
+}
+
+async function call(url, body, src) {
+  $('run').disabled = $('runCam').disabled = true;
+  say('status', 'Đang chạy...');
+  const t0 = performance.now();
+  try {
+    const r = await fetch(url + qs(), { method: 'POST', body });
+    if (!r.ok) throw new Error(await r.text());
+    const j = await r.json();
+    const rt = Math.round(performance.now() - t0);
+    if (src === 'camera') {   // lay dung khung model da thay
+      const buf = new Uint8Array(await (await fetch('/frame.rgb?' + Date.now())).arrayBuffer());
+      const id = new ImageData(W, H);
+      for (let i = 0, k = 0; i < buf.length; i += 3, k += 4) { id.data[k] = buf[i]; id.data[k+1] = buf[i+1]; id.data[k+2] = buf[i+2]; id.data[k+3] = 255; }
+      frame.getContext('2d').putImageData(id, 0, 0);
+      $('saveFrame').disabled = false;
+      draw(frame, j.dets);
+    } else {
+      draw(upImg, j.dets);
+    }
+    show(j, rt);
+    say('status', '');
+    markDone();
+  } catch (e) {
+    say('status', 'Lỗi: ' + e.message, true);
+  }
+  $('run').disabled = !upImg;
+  $('runCam').disabled = false;
+}
+
+$('runCam').onclick = () => call('/run_cam', new TextEncoder().encode(strip($('q').value)), 'camera');
+
+$('run').onclick = () => {
+  if (!upImg) return;
+  // resize kieu stretch ve 320x240 giong cv2.resize
+  const oc = document.createElement('canvas'); oc.width = W; oc.height = H;
+  const octx = oc.getContext('2d'); octx.drawImage(upImg, 0, 0, W, H);
+  const rgba = octx.getImageData(0, 0, W, H).data, rgb = new Uint8Array(W * H * 3);
+  for (let i = 0, j = 0; i < rgba.length; i += 4) { rgb[j++] = rgba[i]; rgb[j++] = rgba[i+1]; rgb[j++] = rgba[i+2]; }
+  const q = new TextEncoder().encode(strip($('q').value));
+  const body = new Uint8Array(rgb.length + q.length); body.set(rgb); body.set(q, rgb.length);
+  call('/run', body, 'upload');
+};
+
+$('q').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  if (!$('runCam').disabled) $('runCam').onclick(); else if (!$('run').disabled) $('run').onclick();
+});
+
+$('file').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const im = new Image();
+  im.onload = () => {
+    upImg = im;
+    const o = $('orig'); o.width = W; o.height = H;
+    o.getContext('2d').drawImage(im, 0, 0, W, H);
+    $('origHint').hidden = true; $('run').disabled = false;
+    say('status', `Ảnh tải lên ${im.width}×${im.height} (sẽ resize về 320×240)`);
+  };
+  im.src = URL.createObjectURL(f);
+};
+
+$('saveFrame').onclick = () => frame.toBlob(b => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(b);
+  a.download = `ov7670_${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
+  a.click(); URL.revokeObjectURL(a.href);
+  say('camMsg', `Đã lưu ${a.download}`);
+}, 'image/png');
+
+// Bo cau hoi: luu trong trinh duyet, bam de chon, chay xong tu chuyen cau ke
+let cur = -1;
+function renderQ() {
+  const qsArr = $('qbank').value.split('\n').map(s => s.trim()).filter(Boolean);
+  $('qlist').innerHTML = '';
+  qsArr.forEach((q, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<span>${i + 1}.</span><span>${esc(q)}</span>`;
+    li.onclick = () => { cur = i; $('q').value = q; $('q').focus(); renderSel(); };
+    $('qlist').appendChild(li);
+  });
+  renderSel();
+}
+function renderSel() { [...$('qlist').children].forEach((li, i) => li.classList.toggle('cur', i === cur)); }
+function markDone() {
+  const li = $('qlist').children[cur];
+  if (!li || $('q').value.trim() !== li.lastChild.textContent) return;
+  li.classList.add('done');
+  const next = $('qlist').children[cur + 1];
+  if (next) next.onclick();
+}
+$('qbank').value = store.get('qbank') || '';
+$('qbank').oninput = () => { store.set('qbank', $('qbank').value); renderQ(); };
+renderQ();
+
+$('csv').onclick = () => {
+  const rows = [['time','src','question','intent','answer','objects','ms_det','ms_intent','ms_total','ms_roundtrip']]
+    .concat([...history].reverse().map(h => [h.when, h.src, h.q, h.intent, h.answer,
+      h.dets.map(d => `${d.c}:${d.s.toFixed(2)}`).join(' '), h.ms_det, h.ms_intent, h.ms_total, h.roundTrip]));
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' }));
+  a.download = 'ket_qua.csv'; a.click(); URL.revokeObjectURL(a.href);
+};
+
+// Camera OV7670 live (MJPEG cong 81)
+const cam = new Image();
+cam.className = 'media'; cam.alt = 'Camera OV7670'; cam.crossOrigin = 'anonymous'; cam.hidden = true;
+$('camBox').prepend(cam);
+cam.onload = () => { $('camHint').hidden = true; say('camMsg', 'Camera live · QVGA 320×240'); };
+cam.onerror = () => { cam.hidden = true; $('camHint').hidden = false; say('camMsg', 'Không có camera (hoặc camera lỗi).', true); };
+$('camOn').onclick = () => { cam.hidden = false; say('camMsg', 'Đang kết nối camera...'); cam.src = `http://${location.hostname}:${streamPort}/stream?${Date.now()}`; };
+$('camOff').onclick = () => { cam.removeAttribute('src'); cam.hidden = true; $('camHint').hidden = false; say('camMsg', 'Đã dừng.'); };
+</script>
+</body>
+</html>

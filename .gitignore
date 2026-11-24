@@ -35,3 +35,6 @@ kaggle_runs/*/teacher_ds/teacher_soft.json
 # Gói nộp cho BTC: trọng số đã nộp (nhỏ, cần để tái lập)
 !pipeline/weights/*.pt
 !pipeline/weights/*.keras
+
+# Firmware ESP32-S3: giu model .tflite nho trong firmware
+!firmware/main/models/*.tflite

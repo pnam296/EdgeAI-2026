@@ -1,0 +1,60 @@
+menu "ESP32-S3 Infer"
+
+config WIFI_SSID
+    string "WiFi SSID (trong = phat AP)"
+    default ""
+
+config WIFI_PASSWORD
+    string "WiFi password"
+    default ""
+
+config WIFI_MAX_RETRY
+    int "So lan thu ket noi truoc khi chuyen sang AP"
+    default 5
+
+config AP_SSID
+    string "SSID cua AP du phong"
+    default "ESP32S3-INFER"
+
+config AP_PASSWORD
+    string "Mat khau AP du phong (>= 8 ky tu, trong = mo)"
+    default "12345678"
+
+config CAM_XCLK_MHZ
+    int "OV7670 XCLK (MHz)"
+    range 5 20
+    default 10
+    help
+        10 MHz on dinh hon voi day jump. Co the tang len 20 neu day ngan.
+
+config CAM_CLKRC
+    int "OV7670 CLKRC prescaler (FPS cam bien = max / (gia tri + 1))"
+    range 0 31
+    default 1
+
+config CAM_JPEG_QUALITY
+    int "JPEG quality stream (5..63, so nho = chat luong cao)"
+    range 5 63
+    default 12
+
+config CAM_HMIRROR
+    int "Lat guong ngang anh camera (0/1)"
+    range 0 1
+    default 0
+
+config CAM_VFLIP
+    int "Lat doc anh camera (0/1)"
+    range 0 1
+    default 0
+
+config CAM_SWAP_BYTES
+    int "Dao byte RGB565 khi doi sang RGB888 cho model (0/1): bat neu anh dua vao model sai mau"
+    range 0 1
+    default 0
+
+config CAM_DROP_FRAMES
+    int "So khung bo truoc khi chup cho model (lay khung moi that su)"
+    range 0 3
+    default 1
+
+endmenu
