@@ -7,3 +7,4 @@ pandas==3.1.0
 opencv-python==5.0.0.93
 pyyaml
 kaggle==2.2.5
+esptool==5.7.0
