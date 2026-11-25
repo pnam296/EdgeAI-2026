@@ -83,16 +83,33 @@ int main(void)
     assert(ids[0] == 3 && ids[1] == 2 && ids[2] == 5 && ids[3] == 4 && ids[4] == 1 && ids[5] == 0 && ids[23] == 0);
 
     char a[256];
-    char q1[] = "co bao nhieu coc"; make_answer(0, q1, d, n, a, sizeof a); puts(a); assert(strstr(a, "2"));
-    char q2[] = "co dien thoai khong"; make_answer(1, q2, d, n, a, sizeof a); puts(a); assert(strstr(a, "Không"));
-    char q3[] = "sach nam o dau"; make_answer(3, q3, d, n, a, sizeof a); puts(a); assert(strstr(a, "giữa") && !strncmp(a, "Sách", 5));
-    make_answer(2, q1, d, n, a, sizeof a); puts(a); assert(!strcmp(a, "Có 2 loại đối tượng: 2 cốc, 1 sách."));
-    make_answer(4, q1, d, n, a, sizeof a); puts(a);
-    char q4[] = "hop co khong phu"; make_answer(1, q4, d, 0, a, sizeof a); puts(a);
-    char q5[] = "dem so sach va coc"; make_answer(0, q5, d, n, a, sizeof a); puts(a);
+    char q1[] = "co bao nhieu coc"; make_answer(0, q1, d, n, NULL, a, sizeof a); puts(a); assert(strstr(a, "2"));
+    char q2[] = "co dien thoai khong"; make_answer(1, q2, d, n, NULL, a, sizeof a); puts(a); assert(strstr(a, "Không"));
+    char q3[] = "sach nam o dau"; make_answer(3, q3, d, n, NULL, a, sizeof a); puts(a); assert(strstr(a, "giữa") && !strncmp(a, "Sách", 5));
+    make_answer(2, q1, d, n, NULL, a, sizeof a); puts(a); assert(!strcmp(a, "Có 2 loại đối tượng: 2 cốc, 1 sách."));
+    make_answer(4, q1, d, n, NULL, a, sizeof a); puts(a);
+    char q4[] = "hop co khong phu"; make_answer(1, q4, d, 0, NULL, a, sizeof a); puts(a);
+    char q5[] = "dem so sach va coc"; make_answer(0, q5, d, n, NULL, a, sizeof a); puts(a);
     assert(!strcmp(a, "Có 1 sách. Có 2 cốc."));
-    char q6[] = "co binh nuoc nao khong"; make_answer(1, q6, d, n, a, sizeof a); puts(a); assert(strstr(a, "chai"));
-    make_answer(2, q1, d, 0, a, sizeof a); puts(a);
+    char q6[] = "co binh nuoc nao khong"; make_answer(1, q6, d, n, NULL, a, sizeof a); puts(a); assert(strstr(a, "chai"));
+    make_answer(2, q1, d, 0, NULL, a, sizeof a); puts(a);
+
+    /* nguong theo lop + du phong LOCATION */
+    det_t e[3] = {{1, 0.90f, 0.05f, 0.4f, 0.25f, 0.6f},    /* cup ben trai, diem cao */
+                  {1, 0.40f, 0.70f, 0.4f, 0.90f, 0.6f},    /* cup ben phai, diem thap */
+                  {2, 0.30f, 0.40f, 0.4f, 0.60f, 0.6f}};   /* phone o giua, diem thap */
+    answer_params_t ap = {{0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f}, 0.2f};
+    assert(fabsf(answer_floor(&ap) - 0.2f) < 1e-6f);
+    det_t ef[3];
+    assert(filter_by_class_conf(e, 3, &ap, ef) == 1);
+    make_answer(0, q1, e, 3, &ap, a, sizeof a); puts(a); assert(strstr(a, "1"));       /* COUNT: chi box >= 0.5 */
+    ap.cls_conf[1] = 0.35f;
+    make_answer(0, q1, e, 3, &ap, a, sizeof a); puts(a); assert(strstr(a, "2"));       /* ha nguong rieng cup */
+    char q7[] = "dien thoai o dau";
+    make_answer(3, q7, e, 3, &ap, a, sizeof a); puts(a); assert(strstr(a, "giữa"));    /* du phong: 0.30 >= 0.2 */
+    ap.loc_floor = 0.35f;
+    make_answer(3, q7, e, 3, &ap, a, sizeof a); puts(a); assert(strstr(a, "Không thấy"));
+    make_answer(1, q7, e, 3, &ap, a, sizeof a); puts(a); assert(strstr(a, "Không"));   /* EXIST khong dung du phong */
 
     test_yolo();
     puts("OK");

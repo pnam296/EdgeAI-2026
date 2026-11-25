@@ -35,10 +35,11 @@ NAMES = ["bottle", "cup", "phone", "book", "mouse", "box", "toy_car"]
 
 
 # ------------------------------------------------------------ decode Python (giống main/logic.c)
-def decode_py(outs, reg_max, conf=0.001, iou=0.7, agnostic=False, max_det=300):
-    """outs: list [(box HxWx4R, cls HxWxNC)] float (đã dequant). Trả về N x 6 [cls, score, x1, y1, x2, y2] chuẩn hóa."""
+def decode_py(outs, reg_max, conf=0.001, iou=0.7, agnostic=False, max_det=300, dist_scale_last=1.0):
+    """outs: list [(box HxWx4R, cls HxWxNC)] float (đã dequant). Trả về N x 6 [cls, score, x1, y1, x2, y2] chuẩn hóa.
+    dist_scale_last: hệ số tầm với mức cuối (tools/yolo_reach.py), giống YOLO_DIST_SCALE_LAST trong logic.h."""
     boxes, scores, labels = [], [], []
-    for b, c in outs:
+    for li, (b, c) in enumerate(outs):
         H, W = c.shape[:2]
         stride = H_IN / H
         best = c.argmax(-1)
@@ -49,6 +50,8 @@ def decode_py(outs, reg_max, conf=0.001, iou=0.7, agnostic=False, max_det=300):
         d = b[ys, xs].reshape(-1, 4, reg_max)
         d = np.exp(d - d.max(-1, keepdims=True))
         d = (d / d.sum(-1, keepdims=True) * np.arange(reg_max)).sum(-1)
+        if li == len(outs) - 1:
+            d = d * dist_scale_last
         ax, ay = xs + 0.5, ys + 0.5
         bx = np.stack([(ax - d[:, 0]) * stride / W_IN, (ay - d[:, 1]) * stride / H_IN,
                        (ax + d[:, 2]) * stride / W_IN, (ay + d[:, 3]) * stride / H_IN], 1).clip(0, 1)
@@ -146,7 +149,10 @@ def main():
     ap.add_argument("--n", type=int, default=0, help="0 = tất cả")
     ap.add_argument("--iou", type=float, default=0.7)
     ap.add_argument("--agnostic", type=int, default=0)
+    ap.add_argument("--dist-scale", type=float, default=1.0,
+                    help="hệ số tầm với P4 lúc train (tools/yolo_reach.py), vd 1.5; phải khớp YOLO_DIST_SCALE_LAST")
     args = ap.parse_args()
+    ds = args.dist_scale
 
     import tensorflow as tf
     tf.config.set_visible_devices([], "GPU")
@@ -168,7 +174,8 @@ def main():
     build = FW / "build_host"
     build.mkdir(exist_ok=True)
     exe = build / ("yolo_host.exe" if os.name == "nt" else "yolo_host")
-    subprocess.check_call(["gcc", "-O2", "-I", str(FW / "main"), str(FW / "test/yolo_host.c"),
+    subprocess.check_call(["gcc", "-O2", f"-DYOLO_DIST_SCALE_LAST={ds}f", "-I", str(FW / "main"),
+                           str(FW / "test/yolo_host.c"),
                            str(FW / "main/logic.c"), "-lm", "-o", str(exe)])
     dump = build / "dump.bin"
 
@@ -188,7 +195,7 @@ def main():
             it.invoke()
             q = [(it.get_tensor(b["index"])[0], it.get_tensor(c["index"])[0]) for b, c in order]
             pb.append(decode_py([(deq(qb, b), deq(qc, c)) for (qb, qc), (b, c) in zip(q, order)], reg_max,
-                                iou=args.iou, agnostic=bool(args.agnostic)))
+                                iou=args.iou, agnostic=bool(args.agnostic), dist_scale_last=ds))
             for (qb, qc), (b, c) in zip(q, order):
                 for t, o in ((qb, b), (qc, c)):
                     f.write(struct.pack("<3ifi", *t.shape, o["quantization"][0], o["quantization"][1]))
@@ -197,7 +204,7 @@ def main():
                 with torch.no_grad():
                     fo = torch_head_outputs(model, torch.from_numpy(x).permute(0, 3, 1, 2).contiguous())
                 pa.append(decode_py([(fo[2 * i][0], fo[2 * i + 1][0]) for i in range(len(levels))], reg_max,
-                                    iou=args.iou, agnostic=bool(args.agnostic)))
+                                    iou=args.iou, agnostic=bool(args.agnostic), dist_scale_last=ds))
             if (k + 1) % 200 == 0:
                 print(f"  {k + 1}/{len(imgs)}", flush=True)
 

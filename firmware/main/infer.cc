@@ -121,9 +121,18 @@ const char *infer_det_kind(void)
     return s_kind == DET_YOLO ? "yolo" : s_kind == DET_GRID ? "grid" : "none";
 }
 
+void answer_default_params(answer_params_t *ap)
+{
+    static const float cls_conf[NUM_CLASSES] = CLASS_CONF_INIT;
+    for (int c = 0; c < NUM_CLASSES; c++) ap->cls_conf[c] = cls_conf[c];
+    ap->loc_floor = LOC_FLOOR;
+}
+
 void infer_default_params(det_params_t *p)
 {
-    p->conf = CONF_THRESH;
+    answer_params_t ap;
+    answer_default_params(&ap);
+    p->conf = answer_floor(&ap);
     p->iou = NMS_IOU;
     p->agnostic = NMS_AGNOSTIC;
 }

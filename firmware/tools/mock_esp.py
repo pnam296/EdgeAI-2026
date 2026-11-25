@@ -49,6 +49,21 @@ class DP(C.Structure):
     _fields_ = [("conf", C.c_float), ("iou", C.c_float), ("agnostic", C.c_int)]
 
 
+class AP(C.Structure):   # answer_params_t
+    _fields_ = [("cls_conf", C.c_float * NC), ("loc_floor", C.c_float)]
+
+
+def read_config():
+    """Ngưỡng mặc định đọc thẳng từ main/model_config.h (giống firmware)."""
+    import re
+    txt = (FW / "main" / "model_config.h").read_text(encoding="utf-8")
+    d = dict(re.findall(r"^#define\s+(\w+)\s+(.+?)\s*(?:/\*.*)?$", txt, re.M))
+    num = lambda s: float(s.strip().rstrip("f"))
+    conf = num(d["CONF_THRESH"])
+    cls = [conf if t.strip() == "CONF_THRESH" else num(t) for t in d["CLASS_CONF_INIT"].strip("{} ").split(",")]
+    return {"cls_conf": cls, "loc": num(d["LOC_FLOOR"]), "iou": num(d["NMS_IOU"]), "agn": int(num(d["NMS_AGNOSTIC"]))}
+
+
 class DET(C.Structure):
     _fields_ = [("cls", C.c_int), ("score", C.c_float), ("x1", C.c_float), ("y1", C.c_float),
                 ("x2", C.c_float), ("y2", C.c_float)]
@@ -64,7 +79,8 @@ def build_logic():
     lib = C.CDLL(str(out))
     lib.decode_yolo.argtypes = [C.POINTER(QT), C.POINTER(QT), C.c_int, C.c_int, C.c_int, C.c_int,
                                 C.POINTER(DP), C.POINTER(DET), C.c_int]
-    lib.make_answer.argtypes = [C.c_int, C.c_char_p, C.POINTER(DET), C.c_int, C.c_char_p, C.c_size_t]
+    lib.make_answer.argtypes = [C.c_int, C.c_char_p, C.POINTER(DET), C.c_int, C.POINTER(AP), C.c_char_p, C.c_size_t]
+    lib.filter_by_class_conf.argtypes = [C.POINTER(DET), C.c_int, C.POINTER(AP), C.POINTER(DET)]
     lib.tokenize.argtypes = [C.c_char_p, C.c_void_p, C.c_int, C.POINTER(C.c_int32), C.c_int]
     return lib
 
@@ -88,8 +104,15 @@ class Engine:
         by = {(o["shape"][1], o["shape"][3]): o for o in outs}
         self.order = [(by[(h, 4 * self.reg_max)], by[(h, NC)]) for h in levels]
         self.seq = int(self.txt.get_input_details()[0]["shape"][1])
-        self.defaults = dict(conf=conf, iou=iou, agn=agn)
+        cfg = read_config()
+        self.cls_conf = cfg["cls_conf"]
+        self.defaults = dict(conf=conf, loc=cfg["loc"], iou=cfg["iou"] if iou is None else iou,
+                             agn=cfg["agn"] if agn is None else agn)   # conf None = ngưỡng riêng từng lớp
         self.lock = threading.Lock()
+
+    def answer_params(self, p):
+        cls = [p["conf"]] * NC if p.get("conf") else self.cls_conf
+        return AP((C.c_float * NC)(*cls), p["loc"])
 
     def detect(self, rgb, p):
         s, z = self.din["quantization"]
@@ -106,8 +129,10 @@ class Engine:
                 dst[i] = QT(t.ctypes.data_as(C.POINTER(C.c_int8)), o["quantization"][0], o["quantization"][1],
                             *t.shape)
         dets = (DET * 64)()
+        ap = self.answer_params(p)
+        floor = min(min(ap.cls_conf), ap.loc_floor)   # = answer_floor(): decode thấp nhất, make_answer lọc lại
         n = self.lib.decode_yolo(box, cls, len(self.order), W, H, self.reg_max,
-                                 C.byref(DP(p["conf"], p["iou"], p["agn"])), dets, 64)
+                                 C.byref(DP(floor, p["iou"], p["agn"])), dets, 64)
         t2 = time.perf_counter()
         return dets, n, (t1 - t0) * 1000, (t2 - t1) * 1000
 
@@ -128,16 +153,18 @@ class Engine:
             dets, n, ms_inv, ms_dec = self.detect(rgb, p)
             t1 = time.perf_counter()
             intent, answer = -1, b""
+            ap = self.answer_params(p)
             if norm.strip():
                 intent = self.intent(norm)
                 ab = C.create_string_buffer(384)
-                self.lib.make_answer(intent, norm, dets, n, ab, 384)
+                self.lib.make_answer(intent, norm, dets, n, C.byref(ap), ab, 384)
                 answer = ab.value
+            n = self.lib.filter_by_class_conf(dets, n, C.byref(ap), dets)   # web chỉ vẽ box đủ ngưỡng lớp
             t2 = time.perf_counter()
         ms_det, ms_int = round((t1 - t0) * 1000), round((t2 - t1) * 1000)
         return {"src": src, "ms_cap": ms_cap, "ms_det": ms_det, "ms_intent": ms_int, "ms_total": ms_det + ms_int,
                 "ms_fill": 0, "ms_invoke": round(ms_inv), "ms_decode": round(ms_dec),
-                "conf": p["conf"], "iou": p["iou"], "agn": p["agn"],
+                "conf": [round(v, 3) for v in ap.cls_conf], "loc": p["loc"], "iou": p["iou"], "agn": p["agn"],
                 "dets": [{"c": CLASS[d.cls], "s": round(d.score, 3),
                           "b": [round(d.x1, 4), round(d.y1, 4), round(d.x2, 4), round(d.y2, 4)]} for d in dets[:n]],
                 "q": norm.decode(), "intent": INTENT[intent] if intent >= 0 else "",
@@ -208,7 +235,7 @@ def make_handler(eng: Engine, cam: Camera, stream_port: int):
                 return self.send(200, html, "text/html; charset=utf-8")
             if path == "/info":
                 d = {"det": "yolo", "cam": cam.cur is not None, "mock": True, "stream_port": stream_port,
-                     **eng.defaults}
+                     **eng.defaults, "conf": [eng.defaults["conf"]] * NC if eng.defaults["conf"] else eng.cls_conf}
                 return self.send(200, json.dumps(d).encode(), "application/json")
             if path == "/frame.rgb":
                 if state["frame"] is None:
@@ -266,9 +293,9 @@ def main():
     ap.add_argument("--port", type=int, default=8080)
     ap.add_argument("--cam-dir", default=str(FW.parent / "edgeai/outputs/yolo_tiny/ds_split/images/val"))
     ap.add_argument("--webcam", type=int, default=None)
-    ap.add_argument("--conf", type=float, default=0.5)
-    ap.add_argument("--iou", type=float, default=0.6)
-    ap.add_argument("--agn", type=int, default=1)
+    ap.add_argument("--conf", type=float, default=None, help="ghi đè ngưỡng mọi lớp (mặc định: CLASS_CONF_INIT)")
+    ap.add_argument("--iou", type=float, default=None)
+    ap.add_argument("--agn", type=int, default=None)
     args = ap.parse_args()
 
     eng = Engine(args.conf, args.iou, args.agn)

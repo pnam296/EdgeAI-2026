@@ -52,6 +52,14 @@ config CAM_SWAP_BYTES
     range 0 1
     default 0
 
+config CAM_AE_TARGET
+    int "Muc sang muc tieu tu dong phoi sang (AEC) 48..208, nho = toi hon"
+    range 48 208
+    default 112
+    help
+        Ghi vao AEW (0x24) = gia tri, AEB (0x25) = gia tri - 16, VPT (0x26) tinh theo.
+        Ban cu dung 160 (0xa0) -> anh qua sang, vat trang bi chay. Chinh thu luc chay: http://<ip>/cam?ae=96
+
 config CAM_DROP_FRAMES
     int "So khung bo truoc khi chup cho model (lay khung moi that su)"
     range 0 3

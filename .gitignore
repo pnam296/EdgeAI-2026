@@ -38,3 +38,12 @@ kaggle_runs/*/teacher_ds/teacher_soft.json
 
 # Firmware ESP32-S3: giu model .tflite nho trong firmware
 !firmware/main/models/*.tflite
+
+# Kaggle: ban sao dataset de upload (1.2 GB) va output tai ve; chi giu log + ket qua json
+kaggle_runs/*/data/
+kaggle_runs/*/out/*
+!kaggle_runs/*/out/*.log
+!kaggle_runs/*/out/results_cam.json
+
+# Cau hinh ca nhan cua editor
+.vscode/

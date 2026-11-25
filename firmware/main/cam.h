@@ -15,3 +15,7 @@ int cam_capture_rgb888(uint8_t *dst);
 
 /* true: stream MJPEG tam nghi (khong ma hoa JPEG) de nhuong CPU cho model trong luc infer */
 void cam_pause_stream(bool pause);
+
+/* Muc sang muc tieu tu dong phoi sang (48..208, mac dinh CONFIG_CAM_AE_TARGET). 0 = ok. Mat khi khoi dong lai. */
+int cam_set_ae_target(int target);
+int cam_get_ae_target(void);

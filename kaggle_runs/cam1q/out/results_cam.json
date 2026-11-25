@@ -1,0 +1,106 @@
+{
+ "teacher": {
+  "btc": {
+   "map50": 0.0,
+   "per_class": {
+    "bottle": 0.0,
+    "cup": 0.0,
+    "phone": 0.0,
+    "book": 0.0,
+    "mouse": 0.0,
+    "box": 0.0,
+    "toy_car": 0.0
+   }
+  },
+  "rf": {
+   "map50": 0.0,
+   "per_class": {
+    "bottle": 0.0,
+    "cup": 0.0,
+    "phone": 0.0,
+    "book": 0.0,
+    "mouse": 0.0,
+    "box": 0.0,
+    "toy_car": 0.0
+   }
+  }
+ },
+ "student_best.pt": {
+  "btc": {
+   "map50": 0.3083,
+   "per_class": {
+    "bottle": 0.23,
+    "cup": 0.271,
+    "phone": 0.294,
+    "book": 0.179,
+    "mouse": 0.27,
+    "box": 0.244,
+    "toy_car": 0.669
+   }
+  },
+  "rf": {
+   "map50": 0.0161,
+   "per_class": {
+    "bottle": 0.011,
+    "cup": 0.007,
+    "phone": 0.005,
+    "book": 0.008,
+    "mouse": 0.006,
+    "box": 0.066,
+    "toy_car": 0.011
+   }
+  }
+ },
+ "student_last.pt": {
+  "btc": {
+   "map50": 0.3085,
+   "per_class": {
+    "bottle": 0.226,
+    "cup": 0.273,
+    "phone": 0.295,
+    "book": 0.179,
+    "mouse": 0.271,
+    "box": 0.24,
+    "toy_car": 0.677
+   }
+  },
+  "rf": {
+   "map50": 0.0163,
+   "per_class": {
+    "bottle": 0.012,
+    "cup": 0.007,
+    "phone": 0.004,
+    "book": 0.008,
+    "mouse": 0.008,
+    "box": 0.066,
+    "toy_car": 0.009
+   }
+  }
+ },
+ "old_kd_student": {
+  "btc": {
+   "map50": 0.9883,
+   "per_class": {
+    "bottle": 0.986,
+    "cup": 0.995,
+    "phone": 0.993,
+    "book": 0.985,
+    "mouse": 0.973,
+    "box": 0.995,
+    "toy_car": 0.991
+   }
+  },
+  "rf": {
+   "map50": 0.1128,
+   "per_class": {
+    "bottle": 0.024,
+    "cup": 0.014,
+    "phone": 0.273,
+    "book": 0.036,
+    "mouse": 0.023,
+    "box": 0.384,
+    "toy_car": 0.036
+   }
+  }
+ }
+}

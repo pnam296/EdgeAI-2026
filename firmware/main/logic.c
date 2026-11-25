@@ -103,6 +103,7 @@ int decode_yolo(const qtensor_t *box, const qtensor_t *cls, int nlevels, int img
     for (int l = 0; l < nlevels; l++) {
         const qtensor_t *bt = &box[l], *ct = &cls[l];
         const float stride = (float)img_h / ct->H;
+        const float ks = (l == nlevels - 1) ? YOLO_DIST_SCALE_LAST : 1.0f; /* tam voi muc cuoi */
         /* so sanh tren int8: v >= q_t  <=>  (v - zp) * scale >= logit_t (scale > 0) */
         float qf = ceilf(logit_t / ct->scale + ct->zp);
         int q_t = qf < -128 ? -128 : qf > 128 ? 128 : (int)qf;
@@ -115,7 +116,7 @@ int decode_yolo(const qtensor_t *box, const qtensor_t *cls, int nlevels, int img
                 float score = sig((c[best] - ct->zp) * ct->scale);
                 const int8_t *b = bt->data + (y * bt->W + x) * bt->C;
                 float d[4];
-                for (int s = 0; s < 4; s++) d[s] = dfl(b + s * reg_max, reg_max, bt->scale);
+                for (int s = 0; s < 4; s++) d[s] = dfl(b + s * reg_max, reg_max, bt->scale) * ks;
                 /* bo zero-point: softmax bat bien khi cong hang so, nen chi can scale */
                 float ax = x + 0.5f, ay = y + 0.5f;
                 det_t t = {best, score,
@@ -210,8 +211,31 @@ static const char *where(const det_t *b)
 
 #define APPEND(...) do { if (p < sz) p += snprintf(out + p, sz - p, __VA_ARGS__); } while (0)
 
-void make_answer(int intent, const char *norm_q, const det_t *d, int n, char *out, size_t sz)
+float answer_floor(const answer_params_t *ap)
 {
+    float f = ap->loc_floor;
+    for (int c = 0; c < NUM_CLASSES; c++)
+        if (ap->cls_conf[c] < f) f = ap->cls_conf[c];
+    return f;
+}
+
+int filter_by_class_conf(const det_t *d, int n, const answer_params_t *ap, det_t *out)
+{
+    int k = 0;
+    for (int i = 0; i < n; i++)
+        if (!ap || d[i].score >= ap->cls_conf[d[i].cls]) out[k++] = d[i];
+    return k;
+}
+
+#define MAX_ANS_DETS 128
+
+void make_answer(int intent, const char *norm_q, const det_t *d_all, int n_all, const answer_params_t *ap,
+                 char *out, size_t sz)
+{
+    static det_t f[MAX_ANS_DETS];   /* static: khong ton stack task httpd */
+    if (n_all > MAX_ANS_DETS) n_all = MAX_ANS_DETS;
+    const int n = filter_by_class_conf(d_all, n_all, ap, f);
+    const det_t *d = f;
     size_t p = 0;
     out[0] = 0;
     const char *name = INTENT_NAMES[intent];
@@ -245,8 +269,12 @@ void make_answer(int intent, const char *norm_q, const det_t *d, int n, char *ou
             APPEND("Có %d %s.", cnt, VN[c]);
         } else if (!strcmp(name, "EXIST")) {
             APPEND(cnt ? "Có %s trong ảnh." : "Không có %s trong ảnh.", VN[c]);
-        } else if (best < 0) {   /* LOCATION */
-            APPEND("Không thấy %s trong ảnh.", VN[c]);
+        } else if (best < 0) {   /* LOCATION: khong co box du nguong lop -> du phong o nguong loc_floor */
+            int fb = -1;
+            for (int j = 0; ap && j < n_all && fb < 0; j++)   /* d_all da sort theo score */
+                if (d_all[j].cls == c && d_all[j].score >= ap->loc_floor) fb = j;
+            if (fb >= 0) APPEND("%s nằm %s.", VN_CAP[c], where(&d_all[fb]));
+            else APPEND("Không thấy %s trong ảnh.", VN[c]);
         } else {
             APPEND("%s nằm %s", VN_CAP[c], where(&d[best]));
             for (int j = best + 1, extra = 0; j < n && extra < 2; j++)   /* them toi da 2 vat cung lop */

@@ -69,6 +69,37 @@ static const uint8_t OV7670_QUALITY_REGS[][2] = {
     {0x14,0x38},{0x4f,0xb3},{0x50,0xb3},{0x51,0x00},{0x52,0x3d},{0x53,0xa7},{0x54,0xe4},{0x3d,0xc0},
 };
 
+#ifndef CONFIG_CAM_AE_TARGET
+#define CONFIG_CAM_AE_TARGET 112   /* sdkconfig cu chua co muc nay: chay `idf.py reconfigure` de cap nhat */
+#endif
+static int s_ae_target = CONFIG_CAM_AE_TARGET;
+
+/* Muc sang AEC: AEW (0x24) = vung tren, AEB (0x25) = vung duoi, VPT (0x26) = vung chinh nhanh
+ * (nibble cao/thap so voi do sang trung binh >> 4). Gia tri nho -> anh toi hon. */
+int cam_set_ae_target(int t)
+{
+    if (t < 48) t = 48;
+    if (t > 208) t = 208;
+    sensor_t *s = esp_camera_sensor_get();
+    if (!s) return -1;
+    extern int SCCB_Write(uint8_t, uint8_t, uint8_t);
+    int aew = t, aeb = t - 16;
+    int hi = (aew + 0x40) >> 4, lo = (aeb - 0x20) >> 4;
+    if (hi > 0x0f) hi = 0x0f;
+    if (lo < 0) lo = 0;
+    int err = SCCB_Write(s->slv_addr, 0x24, aew) | SCCB_Write(s->slv_addr, 0x25, aeb) |
+              SCCB_Write(s->slv_addr, 0x26, (hi << 4) | lo);
+    if (!err) s_ae_target = t;
+    ESP_LOGI(TAG, "AEC muc sang %d: AEW 0x%02x AEB 0x%02x VPT 0x%02x%s", t, aew, aeb, (hi << 4) | lo,
+             err ? " (ghi loi)" : "");
+    return err ? -1 : 0;
+}
+
+int cam_get_ae_target(void)
+{
+    return s_ae_target;
+}
+
 static esp_err_t camera_init(void)
 {
     camera_config_t cfg = {0};
@@ -113,6 +144,7 @@ static esp_err_t camera_init(void)
                 ESP_LOGW(TAG, "Ghi thanh ghi OV7670 0x%02x loi", OV7670_QUALITY_REGS[i][0]);
             }
         }
+        cam_set_ae_target(s_ae_target);   /* ghi de AEW/AEB/VPT cua bang tren (0xa0/0x90/0xe5 = qua sang) */
         /* Cua so anh QVGA theo driver Linux (driver esp32-camera de ~8 cot rac o mep trai) */
         int hs = 172, he = 28, vs = 12, ve = 492;
         SCCB_Write(s->slv_addr, 0x17, hs >> 3);                                  /* HSTART */
