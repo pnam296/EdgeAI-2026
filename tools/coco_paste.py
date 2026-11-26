@@ -186,7 +186,7 @@ def main():
     (out / "images").mkdir(parents=True, exist_ok=True)
     (out / "labels").mkdir(parents=True, exist_ok=True)
     classes = sorted(pool)
-    counts, tiles = defaultdict(int), []
+    counts, tiles, used = defaultdict(int), [], defaultdict(set)
     for k in range(a.n):
         ip, lp = rng.choice(bgs)
         canvas = cv2.resize(cv2.imread(str(ip)), (W, H))
@@ -198,13 +198,15 @@ def main():
         ppc = rng.uniform(plo, phi)
         for _ in range(rng.randint(lo, hi)):
             name = rng.choice(classes)                  # cân bằng theo lớp
-            r = cutout(a.images, rng.choice(pool[name]), rng)
+            j = rng.randrange(len(pool[name]))
+            r = cutout(a.images, pool[name][j], rng)
             if r is None:
                 continue
             smin, smax = SIZE_CM[name]
             r = transform(*r, min(a.max_px, rng.uniform(smin, smax) * ppc), rng)
             if r is not None and place(canvas, boxes, *r, NAMES.index(name), rng, occlude=rng.random() < a.occlude):
                 counts[name] += 1
+                used[name].add(j)
         name = f"coco_{k:05d}"
         cv2.imwrite(str(out / "images" / (name + ".jpg")), canvas, [cv2.IMWRITE_JPEG_QUALITY, 95])
         (out / "labels" / (name + ".txt")).write_text("".join(
@@ -218,7 +220,8 @@ def main():
             tiles.append(t)
         if (k + 1) % 1000 == 0:
             print(f"  {k + 1}/{a.n}", flush=True)
-    print(f"{a.n} ảnh -> {out} | vật đã dán: " + ", ".join(f"{k} {v}" for k, v in counts.items()), flush=True)
+    print(f"{a.n} ảnh -> {out} | vật đã dán (số vật KHÁC NHAU, lặp TB): " + ", ".join(
+        f"{k} {v} ({len(used[k])}, x{v / max(1, len(used[k])):.1f})" for k, v in counts.items()), flush=True)
     if a.preview and tiles:
         cv2.imwrite(a.preview, np.vstack([np.hstack(tiles[i:i + 4]) for i in range(0, len(tiles), 4)]))
 

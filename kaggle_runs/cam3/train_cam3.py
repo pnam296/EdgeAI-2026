@@ -1,6 +1,6 @@
 # cam3: TONG QUAT HOA cho chung ket (do vat/canh hoan toan moi). KHONG train tren anh camera that (chi de test).
 # Du lieu train (tao ngay tren Kaggle):
-#   - BTC train 80% + ban mo phong OV7670
+#   - BTC train 80%: CHI ban mo phong OV7670 (giam anh 3D, bot hoc thuoc)
 #   - Roboflow: dien nhan thieu bang YOLO11x COCO -> zoom_out (da sua: vat phai DU HINH, khong bi cat) -> mo phong
 #   - COCO 2017 + LVIS v1: cat vat theo MASK (bottle/cup/phone/book/mouse + box, coc thuy tinh, mug...), dan len nen BTC dung ti le
 #     camera, xoay moi huong -> hang nghin kieu vat khac nhau -> mo phong
@@ -188,7 +188,8 @@ def link_all(src, split, prefix):
     return n
 
 
-cnt = {"btc": link_all(btc_train, "train", "btc"), "btc_sim": link_all(btc_sim, "train", "btcsim"),
+# anh 3D BTC: chi ban mo phong camera (bo ban goc) -> anh 3D tu ~46% xuong ~30% so vat, bot hoc thuoc vai mo hinh 3D
+cnt = {"btc_sim": link_all(btc_sim, "train", "btcsim"),
        "rf": link_all(TMP / "rft_sim", "train", "rf"), "coco": link_all(TMP / "coco_sim", "train", "coco"),
        "val_btc": link_all(btc_val, "val", "btc"), "val_rf": link_all(TMP / "rfv_sim", "rfval", "rf")}
 real = find("split.json").parent
