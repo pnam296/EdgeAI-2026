@@ -47,7 +47,8 @@ def main():
     for p in src.iterdir():
         if p.suffix.lower() in {".png", ".jpg", ".jpeg"}:
             shutil.move(str(p), img_dir / p.name)
-    (src / "classes.txt").write_text("\n".join(names) + "\n")
+    for d in (src, lbl_dir):   # labelImg đọc classes.txt trong thư mục nhãn
+        (d / "classes.txt").write_text("\n".join(names) + "\n")
 
     model = YOLO(a.weights)
     imgs = sorted(p for p in img_dir.iterdir() if p.suffix.lower() in {".png", ".jpg", ".jpeg"})
