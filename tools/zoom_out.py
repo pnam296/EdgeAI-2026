@@ -53,7 +53,11 @@ def main():
     ap.add_argument("--jitter", type=float, default=0.2, help="dao dong them +-ti le (camera cao/thap, nghieng)")
     ap.add_argument("--max-px", type=float, default=140, help="khong de vat lon hon (gioi han box cua model)")
     ap.add_argument("--ratio", type=float, default=0.5)
-    ap.add_argument("--min-keep", type=float, default=0.6, help="giu box neu con >= ti le dien tich sau khi cat")
+    ap.add_argument("--min-keep", type=float, default=0.95,
+                    help="giu box neu con >= ti le dien tich sau khi cat (thap -> vat mat goc canh van co nhan)")
+    ap.add_argument("--edge", type=float, default=0.01,
+                    help="box cach mep anh GOC < ti le nay = vat bi cat san: vat chinh bi cat -> bo anh, vat phu -> xoa")
+    ap.add_argument("--fit", type=float, default=0.9, help="vat lon nhat toi da ti le nay cua o ghep (khong bi cat)")
     ap.add_argument("--min-px", type=float, default=6)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--preview", default="")
@@ -72,32 +76,65 @@ def main():
             rng.shuffle(pool)
         return pool.pop()
 
-    def shrunk(p):
-        """anh da thu nho + box (pixel) theo kich thuoc that cua vat lon nhat."""
+    skipped = [0]
+
+    def truncated(b, iw, ih):
+        m = args.edge
+        return b[1] < m * iw or b[2] < m * ih or b[3] > (1 - m) * iw or b[4] > (1 - m) * ih
+
+    def shrunk(p, qw, qh):
+        """anh da thu nho + box (pixel, kem co 'bi cat san') theo kich thuoc that cua vat lon nhat, vua o qw x qh.
+        None neu vat chinh bi cat san trong anh goc (chup can canh) -> khong dung duoc."""
         im = load_rgb(p)
+        if im is None:
+            return None
         ih, iw = im.shape[:2]
         boxes = read_labels(src / "labels" / (p.stem + ".txt"), iw, ih)
         if boxes:
-            big = max(boxes, key=lambda b: max(b[3] - b[1], b[4] - b[2]))
-            cur = max(big[3] - big[1], big[4] - big[2])
+            big = max(boxes, key=lambda b: (b[3] - b[1]) * (b[4] - b[2]))
+            if truncated(big, iw, ih):
+                return None
+            bw, bh = big[3] - big[1], big[4] - big[2]
             lo, hi = SIZE_CM.get(classes[big[0]], (8, 20))
             tgt = rng.uniform(lo, hi) * args.px_per_cm * rng.uniform(1 - args.jitter, 1 + args.jitter)
-            s = min(1.0, min(tgt, args.max_px) / max(cur, 1))
+            s = min(1.0, min(tgt, args.max_px) / max(bw, bh, 1), args.fit * qw / max(bw, 1), args.fit * qh / max(bh, 1))
         else:
             s = rng.uniform(0.4, 1.0)
         nw, nh = max(1, round(iw * s)), max(1, round(ih * s))
         im = cv2.resize(im, (nw, nh), interpolation=cv2.INTER_AREA)
-        return im, [[c, x1 * s, y1 * s, x2 * s, y2 * s] for c, x1, y1, x2, y2 in boxes]
+        return im, [[c, x1 * s, y1 * s, x2 * s, y2 * s, truncated([c, x1, y1, x2, y2], iw, ih)]
+                    for c, x1, y1, x2, y2 in boxes]
+
+    def next_usable(qw, qh):
+        for _ in range(50):
+            r = shrunk(next_img(), qw, qh)
+            if r is not None:
+                return r
+            skipped[0] += 1
+        raise RuntimeError("qua nhieu anh co vat chinh bi cat san")
+
+    def cells():
+        """1, 2 (ngang/doc) hoac 4 o: vat lon (box, sach) van co cho hien du kich thuoc."""
+        r = rng.random()
+        if r < 0.2:
+            return [(0, 0, W, H)]
+        if r < 0.45:
+            if rng.random() < 0.5:
+                cx = rng.randint(int(W * 0.35), int(W * 0.65))
+                return [(0, 0, cx, H), (cx, 0, W, H)]
+            cy = rng.randint(int(H * 0.35), int(H * 0.65))
+            return [(0, 0, W, cy), (0, cy, W, H)]
+        cx, cy = rng.randint(int(W * 0.3), int(W * 0.7)), rng.randint(int(H * 0.3), int(H * 0.7))
+        return [(0, 0, cx, cy), (cx, 0, W, cy), (0, cy, cx, H), (cx, cy, W, H)]
 
     sizes, total, erased = [], 0, 0
     previews = []
     for k in range(n_out):
-        cx, cy = rng.randint(int(W * 0.3), int(W * 0.7)), rng.randint(int(H * 0.3), int(H * 0.7))
         canvas = np.zeros((H, W, 3), np.uint8)
         labels = []
-        for qx0, qy0, qx1, qy1 in ((0, 0, cx, cy), (cx, 0, W, cy), (0, cy, cx, H), (cx, cy, W, H)):
+        for qx0, qy0, qx1, qy1 in cells():
             qw, qh = qx1 - qx0, qy1 - qy0
-            im, boxes = shrunk(next_img())
+            im, boxes = next_usable(qw, qh)
             ih, iw = im.shape[:2]
             # nen: mau trung binh vien anh + nhieu nhe (khong lap lai vat chua gan nhan)
             border = np.concatenate([im[0], im[-1], im[:, 0], im[:, -1]]).mean(0)
@@ -115,7 +152,7 @@ def main():
                 ux1, uy1 = min(b[1] for b in boxes), min(b[2] for b in boxes)
                 ux2, uy2 = max(b[3] for b in boxes), max(b[4] for b in boxes)
                 if ux2 - ux1 > qw or uy2 - uy1 > qh:
-                    ux1, uy1, ux2, uy2 = big[1:]
+                    ux1, uy1, ux2, uy2 = big[1:5]
             else:
                 ux1 = uy1 = ux2 = uy2 = 0
             ox = pick(iw, qw, ux1, ux2)  # toa do anh tai goc o (am = anh nho hon o, dat lui vao)
@@ -123,7 +160,7 @@ def main():
             sx0, sy0 = max(ox, 0), max(oy, 0)
             sx1, sy1 = min(ox + qw, iw), min(oy + qh, ih)
             canvas[qy0 + sy0 - oy:qy0 + sy1 - oy, qx0 + sx0 - ox:qx0 + sx1 - ox] = im[sy0:sy1, sx0:sx1]
-            for c, x1, y1, x2, y2 in boxes:
+            for c, x1, y1, x2, y2, cut0 in boxes:
                 a0 = (x2 - x1) * (y2 - y1)
                 bx1, by1 = max(x1, sx0), max(y1, sy0)
                 bx2, by2 = min(x2, sx1), min(y2, sy1)
@@ -131,7 +168,8 @@ def main():
                     continue
                 X1, Y1 = qx0 + bx1 - ox, qy0 + by1 - oy
                 X2, Y2 = qx0 + bx2 - ox, qy0 + by2 - oy
-                if (bx2 - bx1) * (by2 - by1) / a0 < args.min_keep or bx2 - bx1 < args.min_px or by2 - by1 < args.min_px:
+                if cut0 or (bx2 - bx1) * (by2 - by1) / a0 < args.min_keep or bx2 - bx1 < args.min_px \
+                        or by2 - by1 < args.min_px:
                     # vat bi cat do: xoa phan con thay bang mau nen de khong thanh vat khong nhan
                     r = canvas[int(Y1):int(np.ceil(Y2)), int(X1):int(np.ceil(X2))]
                     r[:] = np.clip(border + np.random.default_rng(k + 1).normal(0, 6, r.shape), 0, 255)
@@ -157,7 +195,7 @@ def main():
 
     s = np.array(sizes)
     print(f"{n_out} anh, {total} box | canh dai: median {np.median(s):.0f}px, p90 {np.percentile(s, 90):.0f}, "
-          f"max {s.max():.0f} | >96px {np.mean(s > 96) * 100:.0f}% | xoa {erased} vat bi cat do")
+          f"max {s.max():.0f} | >96px {np.mean(s > 96) * 100:.0f}% | xoa {erased} vat bi cat | bo {skipped[0]} anh vat chinh bi cat san")
     if previews:
         while len(previews) % 4:
             previews.append(np.zeros((H, W, 3), np.uint8))
