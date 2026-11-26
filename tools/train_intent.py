@@ -209,12 +209,19 @@ def main():
     ap.add_argument("--out", default=str(REPO / "outputs" / "intent_v2"))
     ap.add_argument("--epochs", type=int, default=20)
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--holdout", type=float, default=0.0,
+                    help="giấu tỉ lệ câu BTC này khỏi train (kể cả khỏi bước sinh câu) rồi chấm + in câu sai")
     a = ap.parse_args()
 
     import tensorflow as tf
     tf.keras.utils.set_random_seed(a.seed)
     L = tf.keras.layers
     df = pd.read_csv(a.data)
+    held = None
+    if a.holdout > 0:
+        idx = np.random.default_rng(a.seed).permutation(len(df))
+        nh = int(len(df) * a.holdout)
+        held, df = df.iloc[idx[:nh]].reset_index(drop=True), df.iloc[idx[nh:]].reset_index(drop=True)
     T, Y = build_data(df, a.seed)
     leak = [w for w in HELD_OUT if any(re.search(rf"\b{re.escape(w)}\b", t) for t in T)]
     print(f"{len(df)} câu gốc -> {len(T)} câu train | phân bố: {pd.Series(Y).value_counts().to_dict()}")
@@ -252,6 +259,17 @@ def main():
     m.save(out / "intent_textcnn.keras")
     (out / "intent_vocab.txt").write_text("\n".join(itos), encoding="utf-8")
     print(f"TextCNN {m.count_params():,} tham số | vocab {len(itos)} -> {out}")
+    if held is not None:
+        p = m.predict(np.array([enc(q) for q in held.question], np.int32), verbose=0)
+        pi = p.argmax(1)
+        ok = pi == held.intent.map(INTENTS.index).values
+        print()
+        print(f"BTC giấu {len(held)} câu: đúng {ok.mean():.4f} ({(~ok).sum()} câu sai)")
+        for gi in INTENTS:
+            mk = (held.intent == gi).values
+            print(f"   {gi:13s} {ok[mk].mean():.3f} ({mk.sum()} câu)")
+        for j in np.where(~ok)[0]:
+            print(f"   SAI {held.question[j]!r}: {held.intent[j]} -> {INTENTS[pi[j]]} ({p[j].max():.2f})")
     if Path(a.exam).exists():   # chấm nhanh bản float trên bộ đề (không train trên đề)
         ex = pd.read_csv(a.exam)
         p = m.predict(np.array([enc(q) for q in ex.question.map(lambda s: __import__("unicodedata").normalize(
