@@ -1,5 +1,5 @@
 /* Test hau xu ly tren may tinh (khong can board):
- *   gcc -I main test/test_logic.c main/logic.c -lm -o build_host/t && build_host/t
+ *   gcc -DYOLO_DIST_SCALE_LAST=1.0f -I main test/test_logic.c main/logic.c -lm -o build_host/t && build_host/t
  */
 #include <assert.h>
 #include <math.h>

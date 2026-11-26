@@ -42,7 +42,7 @@ int decode_yolo(const qtensor_t *box, const qtensor_t *cls, int nlevels, int img
  * PHAI KHOP luc train: model train voi yolo_reach.apply((1, 1, 1.5)) -> 1.5f (box toi da ~144px).
  * Model cu (train khong co yolo_reach) -> 1.0f. */
 #ifndef YOLO_DIST_SCALE_LAST
-#define YOLO_DIST_SCALE_LAST 1.0f
+#define YOLO_DIST_SCALE_LAST 1.5f
 #endif
 
 /* lowercase, ky tu khong phai [a-z0-9] -> ' ' (giong normalize() cua pipeline: re.sub(r"[^a-z0-9 ]", " ")) */
