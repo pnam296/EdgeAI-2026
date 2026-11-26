@@ -68,6 +68,9 @@ int filter_by_class_conf(const det_t *d, int n, const answer_params_t *ap, det_t
 
 /* Cau tra loi tieng Viet theo intent + ket qua detection.
  * d: box sau NMS o nguong san (sort score giam dan); ap: nguong lop + du phong LOCATION (NULL = dung d nguyen). */
+/* cac lop duoc nhac toi trong cau da normalize (theo thu tu xuat hien), tra ve so lop - cho cong cu may tinh */
+int logic_find_classes(const char *norm, int *cls);
+
 void make_answer(int intent, const char *norm_q, const det_t *d, int n, const answer_params_t *ap, char *out,
                  size_t sz);
 

@@ -11,16 +11,41 @@ static const char *const VN[NUM_CLASSES] = {"chai", "cốc", "điện thoại", 
 static const char *const VN_CAP[NUM_CLASSES] = {"Chai", "Cốc", "Điện thoại", "Sách", "Chuột", "Hộp", "Xe đồ chơi"};
 /* Tu khoa (khong dau) de biet cau hoi nhac toi lop nao. Lay theo IN_SCOPE_NAMES cua pipeline intent.
  * Cum nhieu tu dat truoc tu don cua cung lop. */
-#define MAX_KW 8
+#define MAX_KW 16
 static const char *const KW[NUM_CLASSES][MAX_KW] = {
-    {"binh nuoc", "chai"},
-    {"coc", "ly", "tach"},
-    {"dien thoai", "smartphone", "thoai"},
-    {"sach", "quyen", "cuon"},
+    {"binh nuoc", "binh giu nhiet", "chai", "binh", "lavie", "aquafina"},
+    {"coc", "ly", "tach", "mug"},
+    {"dien thoai", "di dong", "smartphone", "thoai", "dtdd", "dt", "iphone", "samsung", "oppo", "xiaomi", "nokia"},
+    {"sach", "quyen", "cuon", "vo", "so tay", "tap", "truyen", "giao trinh"},
     {"chuot"},
-    {"thung giay", "hop", "thung"},
-    {"o to do choi", "oto do choi", "xe do choi", "oto", "o to", "xe"},
+    {"thung giay", "thung carton", "khan giay", "hop", "thung", "carton"},
+    {"o to do choi", "oto do choi", "xe do choi", "hot wheels", "oto", "o to", "xe"},
 };
+
+/* tu thuong gap gan giong tu khoa (minh~binh, chao~chai...) -> khong bao gio khop gan dung */
+static int is_stop(const char *w, size_t lw)
+{
+    static const char *const S[] = {"minh", "chao", "chan", "nhieu", "thoi", "hinh", "trong", "khong", "nhung", "thay"};
+    for (size_t i = 0; i < sizeof S / sizeof *S; i++)
+        if (strlen(S[i]) == lw && !strncmp(S[i], w, lw)) return 1;
+    return 0;
+}
+
+/* khop gan dung (gõ sai 1 ky tu: thua/thieu/sai/dao 2 ky tu ke nhau) - CHI dung khi khong khop chinh xac lop nao.
+ * Chi voi tu khoa 1 tu, dai >= 4 (tranh "dt"~"de", "ly"~"la"). */
+static int near1(const char *a, size_t la, const char *b, size_t lb)
+{
+    if (la > lb + 1 || lb > la + 1) return 0;
+    size_t i = 0;
+    while (i < la && i < lb && a[i] == b[i]) i++;
+    if (i == la && i == lb) return 1;
+    if (la == lb) {
+        if (!strncmp(a + i + 1, b + i + 1, la - i - 1)) return 1;                       /* sai 1 ky tu */
+        return i + 1 < la && a[i] == b[i + 1] && a[i + 1] == b[i] &&
+               !strncmp(a + i + 2, b + i + 2, la - i - 2);                                /* dao 2 ky tu */
+    }
+    return la > lb ? !strncmp(a + i + 1, b + i, lb - i) : !strncmp(a + i, b + i + 1, la - i);   /* thua/thieu */
+}
 
 static float sig(float x) { return 1.f / (1.f + expf(-x)); }
 static float clamp01(float x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
@@ -195,6 +220,23 @@ static int find_classes(const char *norm, int *cls)
         }
         if (best >= 0) { cls[n] = c; pos[n] = best; n++; }
     }
+    if (!n) {   /* khong khop chinh xac: thu khop gan dung tung tu trong cau (gõ sai 1 ky tu) */
+        for (int c = 0; c < NUM_CLASSES; c++) {
+            int best = -1;
+            for (int k = 0; k < MAX_KW && KW[c][k] && best < 0; k++) {
+                const char *kw = KW[c][k];
+                size_t lk = strlen(kw);
+                if (lk < 4 || strchr(kw, ' ')) continue;
+                for (const char *p = norm; *p && best < 0;) {
+                    while (*p == ' ') p++;
+                    size_t lw = strcspn(p, " ");
+                    if (lw >= 4 && !is_stop(p, lw) && near1(p, lw, kw, lk)) best = (int)(p - norm);
+                    p += lw;
+                }
+            }
+            if (best >= 0) { cls[n] = c; pos[n] = best; n++; }
+        }
+    }
     for (int i = 1; i < n; i++)   /* insertion sort theo vi tri */
         for (int j = i; j > 0 && pos[j] < pos[j - 1]; j--) {
             int t = pos[j]; pos[j] = pos[j - 1]; pos[j - 1] = t;
@@ -290,3 +332,6 @@ void make_answer(int intent, const char *norm_q, const det_t *d_all, int n_all, 
         }
     }
 }
+
+/* cho cong cu tren may tinh (tools/eval_qa.py) goi dung ham tim ten vat cua firmware */
+int logic_find_classes(const char *norm, int *cls) { return find_classes(norm, cls); }

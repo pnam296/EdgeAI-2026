@@ -1,0 +1,164 @@
+question,intent,classes
+co bao nhieu chai nuoc tren ban,COUNT,bottle
+trong anh co may cai chai,COUNT,bottle
+dem so binh nuoc giup minh,COUNT,bottle
+co bn chai vay,COUNT,bottle
+so luong binh giu nhiet la bao nhieu,COUNT,bottle
+co tat ca may chai nhua,COUNT,bottle
+bao nhieu coc tren ban,COUNT,cup
+co may cai ly vay,COUNT,cup
+dem giup minh so tach,COUNT,cup
+co bao nhieu coc thuy tinh,COUNT,cup
+trong hinh co may ly nuoc,COUNT,cup
+so luong coc la bao nhieu z,COUNT,cup
+co bao nhieu dien thoai,COUNT,phone
+co may cai dt tren ban,COUNT,phone
+dem so dtdd trong anh,COUNT,phone
+co bao nhieu chiec smartphone,COUNT,phone
+may cai dien thoai di dong vay,COUNT,phone
+co bao nhieu iphone,COUNT,phone
+co bao nhieu cuon sach,COUNT,book
+co may quyen vo tren ban,COUNT,book
+dem so sach giup minh voi,COUNT,book
+co bao nhieu quyen so tay,COUNT,book
+so luong vo la bao nhieu,COUNT,book
+co may cuon truyen,COUNT,book
+co bao nhieu con chuot,COUNT,mouse
+dem so chuot may tinh,COUNT,mouse
+co may con chuot khong day,COUNT,mouse
+co bao nhieu cai hop,COUNT,box
+co may thung giay,COUNT,box
+dem so hop nhua tren ban,COUNT,box
+co bao nhieu hop khan giay,COUNT,box
+so luong hop la may,COUNT,box
+co bao nhieu xe do choi,COUNT,toy_car
+co may chiec o to do choi,COUNT,toy_car
+dem so xe giup minh,COUNT,toy_car
+co bao nhieu chiec oto mo hinh,COUNT,toy_car
+co may xe hot wheels,COUNT,toy_car
+co bao nhieu chai va coc,COUNT,bottle;cup
+dem so dien thoai va sach,COUNT,phone;book
+co bao nhieu chuot va hop,COUNT,mouse;box
+co may xe va may chai,COUNT,toy_car;bottle
+cho minh biet so coc so chai va so sach,COUNT,cup;bottle;book
+mấy cái chai,COUNT,bottle
+có bao nhiêu cốc,COUNT,cup
+bao nhiêu điện thoại vậy,COUNT,phone
+co bao nhieu chaii,COUNT,bottle
+co bao nhieu dien thaoi,COUNT,phone
+bao nhieu cai hop vay ban oi,COUNT,box
+ban oi dem gium so ly,COUNT,cup
+co chai khong,EXIST,bottle
+trong anh co chai nuoc nao ko,EXIST,bottle
+tren ban co binh nuoc k,EXIST,bottle
+co coc khong vay,EXIST,cup
+co ly nao tren ban khong,EXIST,cup
+xem giup co tach tra khong,EXIST,cup
+co dien thoai khong,EXIST,phone
+co dt nao trong anh ko,EXIST,phone
+co thay chiec smartphone nao khong,EXIST,phone
+co sach khong,EXIST,book
+co quyen vo nao khong,EXIST,book
+tren ban co so tay ko,EXIST,book
+co chuot khong,EXIST,mouse
+co con chuot may tinh nao hok,EXIST,mouse
+co hop khong,EXIST,box
+co thung giay nao khong,EXIST,box
+tren ban co hop khan giay khong,EXIST,box
+co xe do choi khong,EXIST,toy_car
+co chiec o to do choi nao k,EXIST,toy_car
+trong anh co xe nao khong,EXIST,toy_car
+co chai hay coc khong,EXIST,bottle;cup
+co dien thoai va chuot khong,EXIST,phone;mouse
+liệu có cái hộp nào không,EXIST,box
+có chuột không,EXIST,mouse
+co sach hong,EXIST,book
+co coc ko z,EXIST,cup
+hinh nay co chua chai khong,EXIST,bottle
+ban co nhin thay dien thoai khong,EXIST,phone
+trong anh co nhung gi,LIST,
+liet ke cac do vat tren ban,LIST,
+tren ban co gi vay,LIST,
+ke ten tat ca do vat,LIST,
+co nhung vat gi trong hinh,LIST,
+liet ke giup minh nhung thu ban thay,LIST,
+anh nay gom nhung mon do nao,LIST,
+co may loai do vat,LIST,
+trong anh co bao nhieu loai vat khac nhau,LIST,
+cho minh danh sach do vat,LIST,
+mo ta cac vat tren ban,LIST,
+nhung do vat nao dang xuat hien,LIST,
+ban thay gi trong anh,LIST,
+tren mat ban dang co nhung gi,LIST,
+liệt kê đồ vật,LIST,
+co gi trong hinh ko,LIST,
+liet ke va dem tung loai,LIST,
+trong buc anh co nhung doi tuong nao,LIST,
+cac vat the trong anh la gi,LIST,
+ke het do tren ban ra,LIST,
+chai nam o dau,LOCATION,bottle
+chai nuoc o ben nao,LOCATION,bottle
+binh nuoc dat o vi tri nao,LOCATION,bottle
+coc o dau,LOCATION,cup
+cai ly nam ben trai hay ben phai,LOCATION,cup
+tach o giua hay o canh,LOCATION,cup
+dien thoai o dau vay,LOCATION,phone
+dt nam phia nao,LOCATION,phone
+vi tri cua chiec smartphone,LOCATION,phone
+sach nam o dau,LOCATION,book
+quyen vo o ben nao,LOCATION,book
+cuon so tay dat o dau,LOCATION,book
+chuot o dau,LOCATION,mouse
+con chuot nam trai giua hay phai,LOCATION,mouse
+hop o dau,LOCATION,box
+thung giay nam ben nao,LOCATION,box
+hop khan giay o vi tri nao,LOCATION,box
+xe do choi o dau,LOCATION,toy_car
+chiec o to do choi nam ben nao,LOCATION,toy_car
+xe nam o giua phai khong,LOCATION,toy_car
+tim vi tri cua chai,LOCATION,bottle
+xac dinh vi tri coc,LOCATION,cup
+chuột ở đâu,LOCATION,mouse
+điện thoại nằm ở đâu,LOCATION,phone
+chai o cho nao z,LOCATION,bottle
+cho minh biet coc dang o phia nao,LOCATION,cup
+sach nam ben trai dung khong,LOCATION,book
+hop nam ben phai a,LOCATION,box
+hom nay troi co mua khong,OUT_OF_SCOPE,
+ban ten la gi,OUT_OF_SCOPE,
+may gio roi,OUT_OF_SCOPE,
+xin chao,OUT_OF_SCOPE,
+1 cong 1 bang may,OUT_OF_SCOPE,
+thu do cua viet nam la gi,OUT_OF_SCOPE,
+ke cho minh mot cau chuyen cuoi,OUT_OF_SCOPE,
+dich cau nay sang tieng anh,OUT_OF_SCOPE,
+giai phuong trinh bac hai,OUT_OF_SCOPE,
+mau cua chai la gi,OUT_OF_SCOPE,
+chai nuoc nay gia bao nhieu,OUT_OF_SCOPE,
+dien thoai hieu gi vay,OUT_OF_SCOPE,
+cuon sach ten la gi,OUT_OF_SCOPE,
+coc lam bang chat lieu gi,OUT_OF_SCOPE,
+chuot nay co day khong,OUT_OF_SCOPE,
+hop nay dung de lam gi,OUT_OF_SCOPE,
+xe do choi chay nhanh khong,OUT_OF_SCOPE,
+co bao nhieu con meo,OUT_OF_SCOPE,
+trong anh co con cho khong,OUT_OF_SCOPE,
+co may cai ban phim,OUT_OF_SCOPE,
+laptop nam o dau,OUT_OF_SCOPE,
+co bao nhieu cai but,OUT_OF_SCOPE,
+tren ban co cai keo khong,OUT_OF_SCOPE,
+dong ho o dau,OUT_OF_SCOPE,
+co bao nhieu nguoi trong anh,OUT_OF_SCOPE,
+anh nay chup luc may gio,OUT_OF_SCOPE,
+camera nay do phan giai bao nhieu,OUT_OF_SCOPE,
+ban co the bat den khong,OUT_OF_SCOPE,
+ly do gi ma ban khong tra loi,OUT_OF_SCOPE,
+cach lam banh mi,OUT_OF_SCOPE,
+toi nen mua dien thoai nao,OUT_OF_SCOPE,
+nen doc sach gi,OUT_OF_SCOPE,
+hop ly khong,OUT_OF_SCOPE,
+asdkjh qwe,OUT_OF_SCOPE,
+cam on ban,OUT_OF_SCOPE,
+dien thoai con pin khong,OUT_OF_SCOPE,
+chai nuoc con day khong,OUT_OF_SCOPE,
+cai coc nay cua ai,OUT_OF_SCOPE,
