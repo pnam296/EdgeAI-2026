@@ -173,7 +173,7 @@ def main():
     ap.add_argument("--px-per-cm", default="4.5,6.5", help="khoảng px/cm (camera cao/thấp)")
     ap.add_argument("--min-px", type=int, default=40, help="cạnh bbox COCO nhỏ nhất (vật đủ chi tiết)")
     ap.add_argument("--max-px", type=float, default=140)
-    ap.add_argument("--occlude", type=float, default=0.35, help="xác suất vật dán đè một phần lên vật có sẵn")
+    ap.add_argument("--occlude", type=float, default=0.2, help="xác suất vật dán đè một phần lên vật có sẵn (~20%% số vật)")
     ap.add_argument("--occ", default="0.05,0.15", help="vật dán đè che bao nhiêu phần box bên dưới (min,max), ~10%%")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--preview", default="")
