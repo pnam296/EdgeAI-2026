@@ -126,7 +126,7 @@ btc_sim = mkset(TMP / "btc_sim", [(p, tsim / "labels" / (p.stem + ".txt")) for p
 
 # ------------------------------------------------------------------ Roboflow: dien nhan thieu -> zoom (vat du hinh) -> sim
 rf_items = []
-for rname in ("rf_merged", "rf_hotwheels"):   # rf_hotwheels: xe do choi Hot Wheels (neu co trong dataset)
+for rname in ("rf_merged", "rf_hotwheels", "edgeai-hotwheels"):   # Hot Wheels: Kaggle co the bo cap thu muc khi giai nen
     try:
         rfm = find_dir(rname)
     except AssertionError:
@@ -403,4 +403,5 @@ for src, dst in (("student/weights/best.pt", f"yolo_cam3{VARIANT}_best.pt"),
     shutil.copy(W / src, W / dst)
 shutil.rmtree(W / "teacher", ignore_errors=True)
 shutil.rmtree(W / "student", ignore_errors=True)
-print("XONG", json.dumps({k: {s: v[s]["map50"] for s in v} for k, v in RES.items()}), flush=True)
+print("XONG", VARIANT, json.dumps({k: {s: v[s]["map50"] for s in v} for k, v in RES.items() if k not in ("variant", "cfg")}),
+      flush=True)
