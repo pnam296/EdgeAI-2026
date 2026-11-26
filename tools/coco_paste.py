@@ -132,16 +132,42 @@ def transform(crop, mask, target_px, rng):
     return crop, mask
 
 
-def place(canvas, boxes, crop, mask, cls, rng, tries=40, occlude=False, occ=(0.05, 0.15)):
+def near_pos(o, w, h, rng):
+    """vị trí sát cạnh box o (trái/phải/trên/dưới), khe hở -8%..+6 px -> 2 vật cùng lớp nằm sát nhau"""
+    x1, y1, x2, y2 = o
+    side = rng.randrange(4)
+    gx = rng.randint(-int(0.08 * w), 6)
+    gy = rng.randint(-int(0.08 * h), 6)
+    if side == 0:
+        x, y = x2 + gx, rng.randint(int(y1 - h / 2), int(y2 - h / 2))
+    elif side == 1:
+        x, y = x1 - w - gx, rng.randint(int(y1 - h / 2), int(y2 - h / 2))
+    elif side == 2:
+        x, y = rng.randint(int(x1 - w / 2), int(x2 - w / 2)), y2 + gy
+    else:
+        x, y = rng.randint(int(x1 - w / 2), int(x2 - w / 2)), y1 - h - gy
+    return int(x), int(y)
+
+
+def place(canvas, boxes, crop, mask, cls, rng, tries=40, occlude=False, occ=(0.05, 0.15), near=None):
     """occlude=False: chỉ đặt vào chỗ trống. occlude=True: vật mới đè lên MỘT PHẦN vật có sẵn (che occ[0]..occ[1]
-    diện tích box bên dưới, không vật nào bị che quá occ[1]) -> model học nhận vật bị che khi đồ xếp sát nhau."""
+    diện tích box bên dưới, không vật nào bị che quá occ[1]) -> model học nhận vật bị che khi đồ xếp sát nhau.
+    near=box: đặt SÁT CẠNH box đó (chạm / hở vài px, che tối đa ~8%) -> 2 vật cùng lớp sát nhau không bị gộp 1 box."""
     h, w = mask.shape
     if h >= H - 2 or w >= W - 2:
         return False
     for _ in range(tries):
-        x, y = rng.randrange(1, W - w - 1), rng.randrange(1, H - h - 1)
+        if near is not None:
+            x, y = near_pos(near, w, h, rng)
+            if x < 1 or y < 1 or x + w > W - 1 or y + h > H - 1:
+                continue
+        else:
+            x, y = rng.randrange(1, W - w - 1), rng.randrange(1, H - h - 1)
         b = (x, y, x + w, y + h)
-        if occlude and boxes:
+        if near is not None:
+            if any(ioa(b, o[1:]) > 0.08 or ioa(o[1:], b) > 0.08 for o in boxes):
+                continue
+        elif occlude and boxes:
             cov = [ioa(o[1:], b) for o in boxes]
             if not (occ[0] <= max(cov) and all(c <= occ[1] for c in cov)):
                 continue
@@ -174,6 +200,8 @@ def main():
     ap.add_argument("--min-px", type=int, default=40, help="cạnh bbox COCO nhỏ nhất (vật đủ chi tiết)")
     ap.add_argument("--max-px", type=float, default=140)
     ap.add_argument("--occlude", type=float, default=0.2, help="xác suất vật dán đè một phần lên vật có sẵn (~20%% số vật)")
+    ap.add_argument("--same-near", type=float, default=0.25,
+                    help="xác suất vật dán CÙNG LỚP với 1 vật có sẵn và đặt sát cạnh (2 điện thoại cạnh nhau...)")
     ap.add_argument("--occ", default="0.05,0.15", help="vật dán đè che bao nhiêu phần box bên dưới (min,max), ~10%%")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--preview", default="")
@@ -211,14 +239,19 @@ def main():
                 boxes.append((int(c), (x - w / 2) * W, (y - h / 2) * H, (x + w / 2) * W, (y + h / 2) * H))
         ppc = rng.uniform(plo, phi)
         for _ in range(rng.randint(lo, hi)):
-            name = rng.choice(classes)                  # cân bằng theo lớp
+            name, near = rng.choice(classes), None       # cân bằng theo lớp
+            same = [o for o in boxes if NAMES[o[0]] in pool]
+            if same and rng.random() < a.same_near:      # cùng lớp với 1 vật có sẵn, đặt SÁT cạnh nó
+                o = rng.choice(same)
+                name, near = NAMES[o[0]], o[1:]
             j = rng.randrange(len(pool[name]))
             r = cutout(a.images, pool[name][j], rng)
             if r is None:
                 continue
             smin, smax = SIZE_CM[name]
             r = transform(*r, min(a.max_px, rng.uniform(smin, smax) * ppc), rng)
-            if r is not None and place(canvas, boxes, *r, NAMES.index(name), rng, occlude=rng.random() < a.occlude, occ=occ):
+            if r is not None and place(canvas, boxes, *r, NAMES.index(name), rng, occlude=rng.random() < a.occlude, occ=occ,
+                                         near=near):
                 counts[name] += 1
                 used[name].add(j)
         name = f"{a.prefix}_{k:05d}"
