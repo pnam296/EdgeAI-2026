@@ -159,9 +159,16 @@ void tokenize(const char *norm, const char *const *vocab, int nv, int32_t *ids, 
         while (*norm == ' ') norm++;
         size_t len = strcspn(norm, " ");
         if (!len) break;
-        int id = 1;
-        for (int k = 0; k < nv; k++)
-            if (strlen(vocab[k]) == len && !memcmp(vocab[k], norm, len)) { id = k + 2; break; }
+        int id = 1, lo = 0, hi = nv - 1;   /* binary search tren vocab da sort -> O(log nv) cho vocab lon */
+        while (lo <= hi) {
+            int mid = lo + (hi - lo) / 2;
+            const char *w = vocab[mid];
+            int cmp = strncmp(w, norm, len);
+            if (cmp == 0) cmp = (w[len] != '\0');
+            if (cmp == 0) { id = mid + 2; break; }
+            if (cmp < 0) lo = mid + 1;
+            else hi = mid - 1;
+        }
         ids[n++] = id;
         norm += len;
     }
