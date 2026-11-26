@@ -31,10 +31,10 @@ COCO2OURS = {
     "glass_(drink_container)": "cup", "mug": "cup", "Dixie_cup": "cup", "teacup": "cup", "wineglass": "cup",
     "cellular_telephone": "phone", "notebook": "book", "booklet": "book", "paperback_book": "book",
     "mouse_(computer_equipment)": "mouse",
-    "box": "box", "carton": "box", "packet": "box", "matchbox": "box", "pencil_box": "box", "cigarette_case": "box",
+    "box": "box", "carton": "box", "matchbox": "box", "pencil_box": "box", "cigarette_case": "box",
 }
 SIZE_CM = {"bottle": (7, 25), "cup": (7, 12), "phone": (13, 17), "book": (14, 30), "mouse": (9, 13),
-           "box": (10, 30)}
+           "box": (10, 30), "toy_car": (5, 13)}
 W, H = 320, 240
 
 
@@ -92,6 +92,13 @@ def load_bg(bg_dir):
 
 
 def cutout(images_dir, item, rng):
+    if item[0] == "CROP":   # vật cắt hình chữ nhật (Open Images / Hot Wheels); có <tên>_m.png (GrabCut) thì dùng mask đó
+        im = cv2.imread(item[1])
+        if im is None:
+            return None
+        mp = item[1].rsplit(".", 1)[0] + "_m.png"
+        m = cv2.imread(mp, cv2.IMREAD_GRAYSCALE) if Path(mp).exists() else None
+        return im, (m > 127).astype(np.uint8) if m is not None and m.shape == im.shape[:2] else np.ones(im.shape[:2], np.uint8)
     from pycocotools import mask as mu
     fn, ih, iw, seg, (x1, y1, x2, y2) = item
     im = cv2.imread(str(Path(images_dir) / fn))
@@ -119,7 +126,7 @@ def transform(crop, mask, target_px, rng):
         return None
     crop, mask = crop[ys.min():ys.max() + 1, xs.min():xs.max() + 1], mask[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
     s = target_px / max(crop.shape[:2])
-    if s > 1.6:          # vật quá nhỏ trong ảnh gốc: phóng to nhiều thì mờ, bỏ
+    if s > 1.3:          # vật quá nhỏ trong ảnh gốc: phóng to nhiều thì mờ, bỏ
         return None
     crop = cv2.resize(crop, None, fx=s, fy=s, interpolation=cv2.INTER_AREA if s < 1 else cv2.INTER_LINEAR)
     mask = cv2.resize(mask, (crop.shape[1], crop.shape[0]), interpolation=cv2.INTER_NEAREST)
@@ -149,10 +156,11 @@ def near_pos(o, w, h, rng):
     return int(x), int(y)
 
 
-def place(canvas, boxes, crop, mask, cls, rng, tries=40, occlude=False, occ=(0.05, 0.15), near=None):
+def place(canvas, boxes, crop, mask, cls, rng, tries=40, occlude=False, occ=(0.05, 0.15), near=None, edge=False):
     """occlude=False: chỉ đặt vào chỗ trống. occlude=True: vật mới đè lên MỘT PHẦN vật có sẵn (che occ[0]..occ[1]
     diện tích box bên dưới, không vật nào bị che quá occ[1]) -> model học nhận vật bị che khi đồ xếp sát nhau.
-    near=box: đặt SÁT CẠNH box đó (chạm / hở vài px, che tối đa ~8%) -> 2 vật cùng lớp sát nhau không bị gộp 1 box."""
+    near=box: đặt SÁT CẠNH box đó (chạm / hở vài px, che tối đa ~8%) -> 2 vật cùng lớp sát nhau không bị gộp 1 box.
+    edge=True: cho vật LẤN RA NGOÀI mép khung ảnh (còn thấy >= 50%), nhãn = phần thấy được (như chai sát góc ảnh BTC)."""
     h, w = mask.shape
     if h >= H - 2 or w >= W - 2:
         return False
@@ -161,9 +169,14 @@ def place(canvas, boxes, crop, mask, cls, rng, tries=40, occlude=False, occ=(0.0
             x, y = near_pos(near, w, h, rng)
             if x < 1 or y < 1 or x + w > W - 1 or y + h > H - 1:
                 continue
+        elif edge:
+            x, y = rng.randrange(-w // 2, W - w // 2), rng.randrange(-h // 2, H - h // 2)
+            vis = (min(W, x + w) - max(0, x)) * (min(H, y + h) - max(0, y)) / (w * h)
+            if vis < 0.5 or (0 <= x and x + w <= W and 0 <= y and y + h <= H):   # phải thực sự lấn mép
+                continue
         else:
             x, y = rng.randrange(1, W - w - 1), rng.randrange(1, H - h - 1)
-        b = (x, y, x + w, y + h)
+        b = (max(0, x), max(0, y), min(W, x + w), min(H, y + h))
         if near is not None:
             if any(ioa(b, o[1:]) > 0.08 or ioa(o[1:], b) > 0.08 for o in boxes):
                 continue
@@ -174,13 +187,20 @@ def place(canvas, boxes, crop, mask, cls, rng, tries=40, occlude=False, occ=(0.0
         elif any(ioa(b, o[1:]) > 0.1 or ioa(o[1:], b) > 0.1 for o in boxes):
             continue
         alpha = cv2.GaussianBlur(mask.astype(np.float32), (3, 3), 0.8)[..., None]
-        roi = canvas[y:y + h, x:x + w].astype(np.float32)
+        # phần nằm trong khung (edge: vật có thể lấn ra ngoài)
+        cx0, cy0, cx1, cy1 = max(0, -x), max(0, -y), w - max(0, x + w - W), h - max(0, y + h - H)
+        al, cr = alpha[cy0:cy1, cx0:cx1], crop[cy0:cy1, cx0:cx1]
+        X0, Y0 = x + cx0, y + cy0
+        roi = canvas[Y0:Y0 + al.shape[0], X0:X0 + al.shape[1]].astype(np.float32)
         # bóng đổ nhẹ phía dưới-phải cho vật "nằm" trên bàn
-        sh = np.zeros_like(alpha)
-        sh[2:, 2:] = alpha[:-2, :-2]
-        roi *= 1 - 0.25 * sh * (1 - alpha)
-        canvas[y:y + h, x:x + w] = (alpha * crop + (1 - alpha) * roi).astype(np.uint8)
-        boxes.append((cls, *b))
+        sh = np.zeros_like(al)
+        sh[2:, 2:] = al[:-2, :-2]
+        roi *= 1 - 0.25 * sh * (1 - al)
+        canvas[Y0:Y0 + al.shape[0], X0:X0 + al.shape[1]] = (al * cr + (1 - al) * roi).astype(np.uint8)
+        ys, xs = np.where(mask[cy0:cy1, cx0:cx1] > 0)   # nhãn = phần vật THẤY được
+        if len(xs) < 10:
+            return False
+        boxes.append((cls, X0 + xs.min(), Y0 + ys.min(), X0 + xs.max() + 1, Y0 + ys.max() + 1))
         return True
     return False
 
@@ -200,6 +220,9 @@ def main():
     ap.add_argument("--min-px", type=int, default=40, help="cạnh bbox COCO nhỏ nhất (vật đủ chi tiết)")
     ap.add_argument("--max-px", type=float, default=140)
     ap.add_argument("--occlude", type=float, default=0.2, help="xác suất vật dán đè một phần lên vật có sẵn (~20%% số vật)")
+    ap.add_argument("--crops", action="append", default=[],
+                    help="thư mục vật cắt hình chữ nhật có index.csv (file,cls,...) - Open Images, Hot Wheels")
+    ap.add_argument("--edge-cut", type=float, default=0.15, help="xác suất vật lấn ra ngoài mép khung ảnh (còn >= 50%%)")
     ap.add_argument("--class-weights", default="",
                     help="tỉ lệ chọn lớp khi dán, vd 'book=1.5,mouse=1.5,phone=0.7' (lớp không nêu = 1)")
     ap.add_argument("--same-near", type=float, default=0.25,
@@ -218,6 +241,12 @@ def main():
             pool = select(ap_, a.min_px, pool)
         if a.pool_cache:
             pickle.dump(dict(pool), open(a.pool_cache, "wb"))
+    import csv
+    for cdir in a.crops:   # thêm vật cắt hình chữ nhật vào kho
+        n0 = sum(len(v) for v in pool.values())
+        for row in csv.DictReader(open(Path(cdir) / "index.csv")):
+            pool.setdefault(row["cls"], []).append(("CROP", str(Path(cdir) / row["file"])))
+        print(f"thêm {sum(len(v) for v in pool.values()) - n0} vật cắt từ {cdir}", flush=True)
     if a.only_pool:
         print("kho vật: " + ", ".join(f"{k} {len(v)}" for k, v in pool.items()), flush=True)
         return
@@ -257,7 +286,8 @@ def main():
                 smin, smax = SIZE_CM[name]
                 r = transform(*r, min(a.max_px, rng.uniform(smin, smax) * ppc), rng)
                 if r is not None and place(canvas, boxes, *r, NAMES.index(name), rng,
-                                           occlude=rng.random() < a.occlude, occ=occ, near=near):
+                                           occlude=rng.random() < a.occlude, occ=occ, near=near,
+                                           edge=near is None and rng.random() < a.edge_cut):
                     counts[name] += 1
                     used[name].add(j)
                     break

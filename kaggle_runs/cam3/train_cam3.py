@@ -6,7 +6,7 @@
 #     camera, xoay moi huong -> hang nghin kieu vat khac nhau -> mo phong
 # Test (khong bao gio train): 9 anh mau BTC that, 55 anh camera that (data/cam_real da kiem nhan).
 # Val chon best: BTC val + Roboflow val (5% anh goc giu rieng TRUOC khi ghep mosaic -> khong ro ri).
-import os, sys, subprocess, random, shutil, time, json
+import os, sys, subprocess, random, shutil, time, json, re
 from pathlib import Path
 
 QUICK = os.environ.get("QUICK", "0") == "1"
@@ -206,12 +206,13 @@ def generate_data():
         "--copies", 1, "--keep-orig")
 
 
-GEN_MAN = sorted(p for p in ALL_FILES if p.name == "gen3_manifest.json")
+GEN_MAN = sorted((p for p in ALL_FILES if re.fullmatch(r"gen\d+_manifest\.json", p.name)),
+                 key=lambda p: int(re.findall(r"\d+", p.name)[0]), reverse=True)   # gen moi nhat duoc gan
 if GEN_MAN:   # du lieu tao san boi notebook gen3 (chi CPU) -> giai nen ~1 phut thay vi tao lai ~60 phut
     import tarfile
-    print("dung du lieu gen3:", GEN_MAN[0].read_text()[:400], flush=True)
+    print(f"dung du lieu {GEN_MAN[0].name}:", GEN_MAN[0].read_text()[:500], flush=True)
     for name in ("rf_train", "rf_val", "coco"):
-        with tarfile.open(GEN_MAN[0].parent / f"gen3_{name}.tar") as tar:
+        with tarfile.open(GEN_MAN[0].parent / GEN_MAN[0].name.replace("manifest.json", f"{name}.tar")) as tar:
             tar.extractall(TMP)
     RF_TRAIN = sorted((TMP / "rf_train").glob("p*"))
     RF_VAL = sorted((TMP / "rf_val").glob("p*"))
