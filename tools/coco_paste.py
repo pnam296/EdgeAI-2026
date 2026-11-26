@@ -200,6 +200,8 @@ def main():
     ap.add_argument("--min-px", type=int, default=40, help="cạnh bbox COCO nhỏ nhất (vật đủ chi tiết)")
     ap.add_argument("--max-px", type=float, default=140)
     ap.add_argument("--occlude", type=float, default=0.2, help="xác suất vật dán đè một phần lên vật có sẵn (~20%% số vật)")
+    ap.add_argument("--class-weights", default="",
+                    help="tỉ lệ chọn lớp khi dán, vd 'book=1.5,mouse=1.5,phone=0.7' (lớp không nêu = 1)")
     ap.add_argument("--same-near", type=float, default=0.25,
                     help="xác suất vật dán CÙNG LỚP với 1 vật có sẵn và đặt sát cạnh (2 điện thoại cạnh nhau...)")
     ap.add_argument("--occ", default="0.05,0.15", help="vật dán đè che bao nhiêu phần box bên dưới (min,max), ~10%%")
@@ -224,10 +226,13 @@ def main():
     lo, hi = map(int, a.per_img.split(","))
     plo, phi = map(float, a.px_per_cm.split(","))
     occ = tuple(map(float, a.occ.split(",")))
+    wmap = {k: float(v) for k, v in (kv.split("=") for kv in a.class_weights.split(",") if kv)}
     out = Path(a.out)
     (out / "images").mkdir(parents=True, exist_ok=True)
     (out / "labels").mkdir(parents=True, exist_ok=True)
     classes = sorted(pool)
+    cw = [wmap.get(c, 1.0) for c in classes]
+    print("trọng số lớp khi dán: " + ", ".join(f"{c} {w:g}" for c, w in zip(classes, cw)), flush=True)
     counts, tiles, used = defaultdict(int), [], defaultdict(set)
     for k in range(a.n):
         ip, lp = rng.choice(bgs)
@@ -239,21 +244,23 @@ def main():
                 boxes.append((int(c), (x - w / 2) * W, (y - h / 2) * H, (x + w / 2) * W, (y + h / 2) * H))
         ppc = rng.uniform(plo, phi)
         for _ in range(rng.randint(lo, hi)):
-            name, near = rng.choice(classes), None       # cân bằng theo lớp
+            name, near = rng.choices(classes, cw)[0], None   # theo trọng số lớp (mặc định đều nhau)
             same = [o for o in boxes if NAMES[o[0]] in pool]
             if same and rng.random() < a.same_near:      # cùng lớp với 1 vật có sẵn, đặt SÁT cạnh nó
-                o = rng.choice(same)
+                o = rng.choices(same, [wmap.get(NAMES[x[0]], 1.0) for x in same])[0]   # cũng theo trọng số lớp
                 name, near = NAMES[o[0]], o[1:]
-            j = rng.randrange(len(pool[name]))
-            r = cutout(a.images, pool[name][j], rng)
-            if r is None:
-                continue
-            smin, smax = SIZE_CM[name]
-            r = transform(*r, min(a.max_px, rng.uniform(smin, smax) * ppc), rng)
-            if r is not None and place(canvas, boxes, *r, NAMES.index(name), rng, occlude=rng.random() < a.occlude, occ=occ,
-                                         near=near):
-                counts[name] += 1
-                used[name].add(j)
+            for _try in range(3):   # đặt hụt (vật to, hết chỗ) -> thử vật khác CÙNG lớp, để số vật bám đúng trọng số
+                j = rng.randrange(len(pool[name]))
+                r = cutout(a.images, pool[name][j], rng)
+                if r is None:
+                    continue
+                smin, smax = SIZE_CM[name]
+                r = transform(*r, min(a.max_px, rng.uniform(smin, smax) * ppc), rng)
+                if r is not None and place(canvas, boxes, *r, NAMES.index(name), rng,
+                                           occlude=rng.random() < a.occlude, occ=occ, near=near):
+                    counts[name] += 1
+                    used[name].add(j)
+                    break
         name = f"{a.prefix}_{k:05d}"
         cv2.imwrite(str(out / "images" / (name + ".jpg")), canvas, [cv2.IMWRITE_JPEG_QUALITY, 95])
         (out / "labels" / (name + ".txt")).write_text("".join(
