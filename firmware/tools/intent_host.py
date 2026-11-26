@@ -55,7 +55,7 @@ def build_logic():
     lib = C.CDLL(str(out))
     lib.normalize_text.argtypes = [C.c_char_p]
     lib.tokenize.argtypes = [C.c_char_p, C.c_void_p, C.c_int, C.POINTER(C.c_int32), C.c_int]
-    lib.make_answer.argtypes = [C.c_int, C.c_char_p, C.POINTER(DET), C.c_int, C.c_char_p, C.c_size_t]
+    lib.make_answer.argtypes = [C.c_int, C.c_char_p, C.POINTER(DET), C.c_int, C.c_void_p, C.c_char_p, C.c_size_t]   # ap = NULL: dung nguyen box
     return lib
 
 
@@ -147,7 +147,7 @@ class IntentHost:
 
         intent_idx = int(np.argmax(probs))
         ans_buf = C.create_string_buffer(384)
-        self.lib.make_answer(intent_idx, norm_q, dets, n_dets, ans_buf, 384)
+        self.lib.make_answer(intent_idx, norm_q, dets, n_dets, None, ans_buf, 384)
         answer = ans_buf.value.decode("utf-8", errors="replace")
         return norm_str, token_ids, probs, intent_idx, answer, ms
 
