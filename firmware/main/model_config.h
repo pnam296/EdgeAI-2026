@@ -18,7 +18,7 @@
  * (COUNT+EXIST 35%, LIST 25%, LOCATION 30%), khong theo mAP; script in san doan #define de dan vao day.
  * Web/API doi tung lan chay: ?conf=0.5 (ghi de nguong MOI lop) &loc=0.1 &iou=0.6 &agn=1.
  *  CLASS_CONF_INIT: nguong tung lop {bottle, cup, phone, book, mouse, box, toy_car} cho COUNT/EXIST/LIST
- *  LOC_FLOOR      : LOCATION hoi lop X ma khong co box X du nguong -> lay box X diem cao nhat >= LOC_FLOOR */
+ *  LOC_FLOOR      : LOCATION hoi lop X ma khong co box X du nguong -> lay box X diem cao nhat >= LOC_FLOOR
  * Gia tri duoi (model cam1 yolo_cam_best.pt, P4 x1.5, INT8; tune_answer.py tren BTC val + Roboflow mo phong camera):
  * tong 0.869 (C+E 0.943, LIST 0.635, LOC 0.978); BTC 0.892, RF 0.846. Model cu cung bo val: tong 0.617 (RF 0.319).
  * Script chon toy_car 0.275 nhung loi chi +0.003 (khop qua val, de bao nham board/module tren anh that) -> giu 0.475;
