@@ -153,7 +153,12 @@ def cmd_capture(a, esp):
     print(f"Lưu vào {out} | Enter = chụp ngay | Ctrl+C = dừng")
     try:
         while a.n <= 0 or n < a.n:
-            rgb = esp.frame(snap=True)
+            try:
+                rgb = esp.frame(snap=True)
+            except Exception as e:   # ESP bận/wifi chập chờn: thử lại, không dừng cả buổi chụp
+                print(f"  lỗi lấy ảnh ({type(e).__name__}), thử lại sau 3 s")
+                time.sleep(3)
+                continue
             p = out / f"{a.prefix}_{datetime.now():%Y%m%d_%H%M%S_%f}"[:-3]
             cv2.imwrite(str(p) + ".png", rgb[:, :, ::-1])
             n += 1
