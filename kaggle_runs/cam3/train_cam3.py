@@ -124,84 +124,101 @@ stems = {p.stem for p in train_btc}
 btc_sim = mkset(TMP / "btc_sim", [(p, tsim / "labels" / (p.stem + ".txt")) for p in sorted((tsim / "images").iterdir())
                                   if p.stem.rsplit("_sim", 1)[0] in stems])
 
-# ------------------------------------------------------------------ Roboflow: dien nhan thieu -> zoom (vat du hinh) -> sim
-rf_items = []
-for rname in ("rf_merged", "rf_hotwheels", "edgeai-hotwheels"):   # Hot Wheels: Kaggle co the bo cap thu muc khi giai nen
-    try:
-        rfm = find_dir(rname)
-    except AssertionError:
-        print(f"(khong co {rname})", flush=True)
-        continue
-    its = [(p, rfm / "labels" / (p.stem + ".txt")) for p in sorted((rfm / "images").iterdir())]
-    print(f"{rname}: {len(its)} anh", flush=True)
-    rf_items += its
-random.Random(1).shuffle(rf_items)
-if QUICK:
-    rf_items = rf_items[:600]
-n_rv = max(1, len(rf_items) // 20)
-rf_parts = {"rfv": rf_items[:n_rv], "rft": rf_items[n_rv:]}
-COCO_IDS = {39: 0, 40: 1, 41: 1, 67: 2, 73: 3, 64: 4}   # bottle, wine glass->cup, cup, cell phone, book, mouse
-filler = YOLO("yolo11x.pt")
+def generate_data():
+    """tu tao du lieu Roboflow + COCO/LVIS (khi KHONG gan output notebook gen3) -> TMP/rft_sim, rfv_sim, coco_sim"""
+    # ------------------------------------------------------------------ Roboflow: dien nhan thieu -> zoom (vat du hinh) -> sim
+    rf_items = []
+    for rname in ("rf_merged", "rf_hotwheels", "edgeai-hotwheels"):   # Hot Wheels: Kaggle co the bo cap thu muc khi giai nen
+        try:
+            rfm = find_dir(rname)
+        except AssertionError:
+            print(f"(khong co {rname})", flush=True)
+            continue
+        its = [(p, rfm / "labels" / (p.stem + ".txt")) for p in sorted((rfm / "images").iterdir())]
+        print(f"{rname}: {len(its)} anh", flush=True)
+        rf_items += its
+    random.Random(1).shuffle(rf_items)
+    if QUICK:
+        rf_items = rf_items[:600]
+    n_rv = max(1, len(rf_items) // 20)
+    rf_parts = {"rfv": rf_items[:n_rv], "rft": rf_items[n_rv:]}
+    COCO_IDS = {39: 0, 40: 1, 41: 1, 67: 2, 73: 3, 64: 4}   # bottle, wine glass->cup, cup, cell phone, book, mouse
+    filler = YOLO("yolo11x.pt")
 
 
-def iou(a, b):
-    iw, ih = min(a[2], b[2]) - max(a[0], b[0]), min(a[3], b[3]) - max(a[1], b[1])
-    if iw <= 0 or ih <= 0:
-        return 0.0
-    i = iw * ih
-    return i / ((a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - i)
+    def iou(a, b):
+        iw, ih = min(a[2], b[2]) - max(a[0], b[0]), min(a[3], b[3]) - max(a[1], b[1])
+        if iw <= 0 or ih <= 0:
+            return 0.0
+        i = iw * ih
+        return i / ((a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - i)
 
 
-n_fill = 0
-for part, items in rf_parts.items():
-    d = mkset(TMP / f"{part}_filled", items)
-    ims = sorted((d / "images").iterdir())
-    for k in range(0, len(ims), 64):
-        for r in filler.predict([str(p) for p in ims[k:k + 64]], imgsz=640, conf=0.5, classes=list(COCO_IDS),
-                                verbose=False, device=0):
-            lp = d / "labels" / (Path(r.path).stem + ".txt")
-            old = [list(map(float, l.split())) for l in lp.read_text().split("\n") if l.strip()]
-            ob = [(o[1] - o[3] / 2, o[2] - o[4] / 2, o[1] + o[3] / 2, o[2] + o[4] / 2) for o in old]
-            add = []
-            for c, b in zip(r.boxes.cls.int().tolist(), r.boxes.xyxyn.tolist()):
-                if all(iou(b, o) < 0.3 for o in ob):
-                    add.append(f"{COCO_IDS[c]} {(b[0] + b[2]) / 2:.6f} {(b[1] + b[3]) / 2:.6f} {b[2] - b[0]:.6f} {b[3] - b[1]:.6f}\n")
-                    ob.append(tuple(b))
-            if add:
-                with open(lp, "a") as f:
-                    f.write(("" if not old or lp.read_text().endswith("\n") else "\n") + "".join(add))
-                n_fill += len(add)
-print(f"Roboflow: dien them {n_fill} box thieu nhan (YOLO11x COCO, conf 0.5)", flush=True)
-del filler
-torch.cuda.empty_cache()
+    n_fill = 0
+    for part, items in rf_parts.items():
+        d = mkset(TMP / f"{part}_filled", items)
+        ims = sorted((d / "images").iterdir())
+        for k in range(0, len(ims), 64):
+            for r in filler.predict([str(p) for p in ims[k:k + 64]], imgsz=640, conf=0.5, classes=list(COCO_IDS),
+                                    verbose=False, device=0):
+                lp = d / "labels" / (Path(r.path).stem + ".txt")
+                old = [list(map(float, l.split())) for l in lp.read_text().split("\n") if l.strip()]
+                ob = [(o[1] - o[3] / 2, o[2] - o[4] / 2, o[1] + o[3] / 2, o[2] + o[4] / 2) for o in old]
+                add = []
+                for c, b in zip(r.boxes.cls.int().tolist(), r.boxes.xyxyn.tolist()):
+                    if all(iou(b, o) < 0.3 for o in ob):
+                        add.append(f"{COCO_IDS[c]} {(b[0] + b[2]) / 2:.6f} {(b[1] + b[3]) / 2:.6f} {b[2] - b[0]:.6f} {b[3] - b[1]:.6f}\n")
+                        ob.append(tuple(b))
+                if add:
+                    with open(lp, "a") as f:
+                        f.write(("" if not old or lp.read_text().endswith("\n") else "\n") + "".join(add))
+                    n_fill += len(add)
+    print(f"Roboflow: dien them {n_fill} box thieu nhan (YOLO11x COCO, conf 0.5)", flush=True)
+    del filler
+    torch.cuda.empty_cache()
 
-classes_file = TMP / "classes.txt"
-classes_file.write_text("\n".join(CLASSES) + "\n")
-for part, ratio in (("rft", RF_RATIO), ("rfv", 1.0)):
-    run(TOOLS / "zoom_out.py", "--src", TMP / f"{part}_filled", "--out", TMP / f"{part}_zoom", "--ratio", ratio,
-        "--classes", classes_file, "--seed", 0 if part == "rft" else 1)
-run(TOOLS / "sim_ov7670.py", "apply", "--profile", PROFILE, "--src", TMP / "rft_zoom", "--out", TMP / "rft_sim",
-    "--copies", 1, "--keep-orig")
-run(TOOLS / "sim_ov7670.py", "apply", "--profile", PROFILE, "--src", TMP / "rfv_zoom", "--out", TMP / "rfv_sim",
-    "--copies", 1)
+    classes_file = TMP / "classes.txt"
+    classes_file.write_text("\n".join(CLASSES) + "\n")
+    for part, ratio in (("rft", RF_RATIO), ("rfv", 1.0)):
+        run(TOOLS / "zoom_out.py", "--src", TMP / f"{part}_filled", "--out", TMP / f"{part}_zoom", "--ratio", ratio,
+            "--classes", classes_file, "--seed", 0 if part == "rft" else 1)
+    run(TOOLS / "sim_ov7670.py", "apply", "--profile", PROFILE, "--src", TMP / "rft_zoom", "--out", TMP / "rft_sim",
+        "--copies", 1, "--keep-orig")
+    run(TOOLS / "sim_ov7670.py", "apply", "--profile", PROFILE, "--src", TMP / "rfv_zoom", "--out", TMP / "rfv_sim",
+        "--copies", 1)
 
-# ------------------------------------------------------------------ COCO: cat theo mask -> dan len nen BTC -> sim
-ann, cimg = find_coco()
-croot = cimg.parent                     # chua train2017/ + val2017/ (anh LVIS nam o ca hai)
-assert (croot / "val2017").is_dir(), f"thieu {croot}/val2017"
-lvis = []
-for part in ("train", "val"):           # LVIS v1: cung anh COCO, them box/carton/coc thuy tinh/mug... co mask
-    z = TMP / f"lvis_v1_{part}.json.zip"
-    subprocess.check_call(["wget", "-q", "-O", str(z), f"https://dl.fbaipublicfiles.com/LVIS/lvis_v1_{part}.json.zip"])
-    subprocess.check_call(["unzip", "-q", "-o", str(z), "-d", str(TMP)])
-    z.unlink()
-    lvis.append(TMP / f"lvis_v1_{part}.json")
-run(TOOLS / "coco_paste.py", "--ann", ann, *[x for p in lvis for x in ("--ann", p)], "--images", croot,
-    "--bg", btc_train, "--out", TMP / "coco_paste", "--n", N_COCO, "--preview", W / "coco_paste_preview.jpg")
-for p in lvis:
-    p.unlink()
-run(TOOLS / "sim_ov7670.py", "apply", "--profile", PROFILE, "--src", TMP / "coco_paste", "--out", TMP / "coco_sim",
-    "--copies", 1, "--keep-orig")
+    # ------------------------------------------------------------------ COCO: cat theo mask -> dan len nen BTC -> sim
+    ann, cimg = find_coco()
+    croot = cimg.parent                     # chua train2017/ + val2017/ (anh LVIS nam o ca hai)
+    assert (croot / "val2017").is_dir(), f"thieu {croot}/val2017"
+    lvis = []
+    for part in ("train", "val"):           # LVIS v1: cung anh COCO, them box/carton/coc thuy tinh/mug... co mask
+        z = TMP / f"lvis_v1_{part}.json.zip"
+        subprocess.check_call(["wget", "-q", "-O", str(z), f"https://dl.fbaipublicfiles.com/LVIS/lvis_v1_{part}.json.zip"])
+        subprocess.check_call(["unzip", "-q", "-o", str(z), "-d", str(TMP)])
+        z.unlink()
+        lvis.append(TMP / f"lvis_v1_{part}.json")
+    run(TOOLS / "coco_paste.py", "--ann", ann, *[x for p in lvis for x in ("--ann", p)], "--images", croot,
+        "--bg", btc_train, "--out", TMP / "coco_paste", "--n", N_COCO, "--preview", W / "coco_paste_preview.jpg")
+    for p in lvis:
+        p.unlink()
+    run(TOOLS / "sim_ov7670.py", "apply", "--profile", PROFILE, "--src", TMP / "coco_paste", "--out", TMP / "coco_sim",
+        "--copies", 1, "--keep-orig")
+
+
+GEN_MAN = sorted(p for p in ALL_FILES if p.name == "gen3_manifest.json")
+if GEN_MAN:   # du lieu tao san boi notebook gen3 (chi CPU) -> giai nen ~1 phut thay vi tao lai ~60 phut
+    import tarfile
+    print("dung du lieu gen3:", GEN_MAN[0].read_text()[:400], flush=True)
+    for name in ("rf_train", "rf_val", "coco"):
+        with tarfile.open(GEN_MAN[0].parent / f"gen3_{name}.tar") as tar:
+            tar.extractall(TMP)
+    RF_TRAIN = sorted((TMP / "rf_train").glob("p*"))
+    RF_VAL = sorted((TMP / "rf_val").glob("p*"))
+    COCO_OUT = sorted((TMP / "coco").glob("p*"))
+else:
+    generate_data()
+    RF_TRAIN, RF_VAL, COCO_OUT = [TMP / "rft_sim"], [TMP / "rfv_sim"], [TMP / "coco_sim"]
 print(f"tao du lieu xong sau {(time.time() - t0) / 60:.1f} phut", flush=True)
 
 # ------------------------------------------------------------------ gom vao /tmp/ds
@@ -223,8 +240,10 @@ def link_all(src, split, prefix):
 
 # anh 3D BTC: chi ban mo phong camera (bo ban goc) -> anh 3D tu ~46% xuong ~30% so vat, bot hoc thuoc vai mo hinh 3D
 cnt = {"btc_sim": link_all(btc_sim, "train", "btcsim"),
-       "rf": link_all(TMP / "rft_sim", "train", "rf"), "coco": link_all(TMP / "coco_sim", "train", "coco"),
-       "val_btc": link_all(btc_val, "val", "btc"), "val_rf": link_all(TMP / "rfv_sim", "rfval", "rf")}
+       "rf": sum(link_all(d, "train", f"rf{k}") for k, d in enumerate(RF_TRAIN)),
+       "coco": sum(link_all(d, "train", f"coco{k}") for k, d in enumerate(COCO_OUT)),
+       "val_btc": link_all(btc_val, "val", "btc"),
+       "val_rf": sum(link_all(d, "rfval", f"rf{k}") for k, d in enumerate(RF_VAL))}
 real = find("split.json").parent
 cnt["test_real"] = link_all(real / "train", "real", "a") + link_all(real / "test", "real", "b")
 cnt["test_btcmau"] = link_all(find_dir("btc_samples"), "btcmau", "m")

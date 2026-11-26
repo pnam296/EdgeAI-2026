@@ -161,7 +161,10 @@ def place(canvas, boxes, crop, mask, cls, rng, tries=40, occlude=False, occ=(0.1
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--ann", required=True, action="append", help="file nhãn COCO/LVIS (lặp lại được)")
+    ap.add_argument("--ann", action="append", default=[], help="file nhãn COCO/LVIS (lặp lại được)")
+    ap.add_argument("--pool-cache", default="", help="file .pkl kho vật đã lọc: có thì đọc (bỏ qua --ann), chưa có thì ghi")
+    ap.add_argument("--prefix", default="coco", help="tiền tố tên ảnh (chạy song song nhiều phần không trùng tên)")
+    ap.add_argument("--only-pool", action="store_true", help="chỉ lọc kho vật rồi ghi --pool-cache, không sinh ảnh")
     ap.add_argument("--images", required=True, help="thư mục gốc COCO chứa train2017/ và val2017/")
     ap.add_argument("--bg", required=True, help="thư mục nền images/ + labels/ (YOLO)")
     ap.add_argument("--out", required=True)
@@ -175,9 +178,18 @@ def main():
     ap.add_argument("--preview", default="")
     a = ap.parse_args()
     rng = random.Random(a.seed)
-    pool = None
-    for ap_ in a.ann:
-        pool = select(ap_, a.min_px, pool)
+    import pickle
+    if a.pool_cache and Path(a.pool_cache).exists():
+        pool = pickle.load(open(a.pool_cache, "rb"))
+    else:
+        pool = None
+        for ap_ in a.ann:
+            pool = select(ap_, a.min_px, pool)
+        if a.pool_cache:
+            pickle.dump(dict(pool), open(a.pool_cache, "wb"))
+    if a.only_pool:
+        print("kho vật: " + ", ".join(f"{k} {len(v)}" for k, v in pool.items()), flush=True)
+        return
     print("vật COCO/LVIS dùng được: " + ", ".join(f"{k} {len(v)}" for k, v in pool.items()), flush=True)
     bgs = load_bg(a.bg)
     lo, hi = map(int, a.per_img.split(","))
@@ -207,7 +219,7 @@ def main():
             if r is not None and place(canvas, boxes, *r, NAMES.index(name), rng, occlude=rng.random() < a.occlude):
                 counts[name] += 1
                 used[name].add(j)
-        name = f"coco_{k:05d}"
+        name = f"{a.prefix}_{k:05d}"
         cv2.imwrite(str(out / "images" / (name + ".jpg")), canvas, [cv2.IMWRITE_JPEG_QUALITY, 95])
         (out / "labels" / (name + ".txt")).write_text("".join(
             f"{c} {(x1 + x2) / 2 / W:.6f} {(y1 + y2) / 2 / H:.6f} {(x2 - x1) / W:.6f} {(y2 - y1) / H:.6f}\n"
