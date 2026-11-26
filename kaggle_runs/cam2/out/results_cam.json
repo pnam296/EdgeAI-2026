@@ -1,0 +1,150 @@
+{
+ "teacher": {
+  "btc": {
+   "map50": 0.9912,
+   "per_class": {
+    "bottle": 0.995,
+    "cup": 0.995,
+    "phone": 0.989,
+    "book": 0.98,
+    "mouse": 0.993,
+    "box": 0.995,
+    "toy_car": 0.992
+   }
+  },
+  "rf": {
+   "map50": 0.9803,
+   "per_class": {
+    "bottle": 0.992,
+    "cup": 0.994,
+    "phone": 0.995,
+    "book": 0.97,
+    "mouse": 0.985,
+    "box": 0.972,
+    "toy_car": 0.955
+   }
+  },
+  "real": {
+   "map50": 0.9707,
+   "per_class": {
+    "bottle": 0.976,
+    "cup": 0.925,
+    "phone": 0.995,
+    "book": 0.995,
+    "mouse": 0.938,
+    "toy_car": 0.995
+   }
+  }
+ },
+ "student_best.pt": {
+  "btc": {
+   "map50": 0.9861,
+   "per_class": {
+    "bottle": 0.991,
+    "cup": 0.994,
+    "phone": 0.979,
+    "book": 0.976,
+    "mouse": 0.986,
+    "box": 0.994,
+    "toy_car": 0.982
+   }
+  },
+  "rf": {
+   "map50": 0.9559,
+   "per_class": {
+    "bottle": 0.973,
+    "cup": 0.986,
+    "phone": 0.991,
+    "book": 0.915,
+    "mouse": 0.987,
+    "box": 0.963,
+    "toy_car": 0.876
+   }
+  },
+  "real": {
+   "map50": 0.9797,
+   "per_class": {
+    "bottle": 0.973,
+    "cup": 0.925,
+    "phone": 0.995,
+    "book": 0.995,
+    "mouse": 0.995,
+    "toy_car": 0.995
+   }
+  }
+ },
+ "student_last.pt": {
+  "btc": {
+   "map50": 0.9863,
+   "per_class": {
+    "bottle": 0.992,
+    "cup": 0.994,
+    "phone": 0.981,
+    "book": 0.975,
+    "mouse": 0.986,
+    "box": 0.994,
+    "toy_car": 0.983
+   }
+  },
+  "rf": {
+   "map50": 0.9574,
+   "per_class": {
+    "bottle": 0.979,
+    "cup": 0.988,
+    "phone": 0.993,
+    "book": 0.917,
+    "mouse": 0.986,
+    "box": 0.963,
+    "toy_car": 0.877
+   }
+  },
+  "real": {
+   "map50": 0.979,
+   "per_class": {
+    "bottle": 0.969,
+    "cup": 0.925,
+    "phone": 0.995,
+    "book": 0.995,
+    "mouse": 0.995,
+    "toy_car": 0.995
+   }
+  }
+ },
+ "cam1_student": {
+  "btc": {
+   "map50": 0.9865,
+   "per_class": {
+    "bottle": 0.992,
+    "cup": 0.994,
+    "phone": 0.981,
+    "book": 0.976,
+    "mouse": 0.984,
+    "box": 0.994,
+    "toy_car": 0.984
+   }
+  },
+  "rf": {
+   "map50": 0.9477,
+   "per_class": {
+    "bottle": 0.973,
+    "cup": 0.982,
+    "phone": 0.99,
+    "book": 0.887,
+    "mouse": 0.984,
+    "box": 0.957,
+    "toy_car": 0.86
+   }
+  },
+  "real": {
+   "map50": 0.616,
+   "per_class": {
+    "bottle": 0.433,
+    "cup": 0.876,
+    "phone": 0.834,
+    "book": 0.488,
+    "mouse": 0.099,
+    "toy_car": 0.965
+   }
+  }
+ }
+}
