@@ -10,8 +10,19 @@ import os, sys, subprocess, random, shutil, time, json
 from pathlib import Path
 
 QUICK = True
-T_EPOCHS = 2 if QUICK else 30
-S_EPOCHS = 2 if QUICK else 60
+# Thu nghiem song song: moi ban chi doi 1 yeu to so voi A (de biet yeu to nao co tac dung).
+#  A: goc. Thay + tro deu khoi tao tu cam1.
+#  B: thay LON (backbone YOLO11m pretrained COCO, ~10M) -> kien thuc rong hon cho distill.
+#  C: tro train TU DAU (khong nap cam1) + nhieu epoch -> xem cam1 co keo theo "hoc thuoc" anh 3D khong.
+#  D: tro P3/P4 (bo P2, 161k, -38% tinh toan); distill tu thay P2P4 (chi lay 2 muc P3/P4 cua thay).
+VARIANT = "A"
+V = {"A": dict(teacher="cam1", t_epochs=30, t_lr=0.005, s_yaml="p2p4", s_init="cam1", s_epochs=60, s_lr=0.002),
+     "B": dict(teacher="yolo11m", t_epochs=40, t_lr=0.01, s_yaml="p2p4", s_init="cam1", s_epochs=60, s_lr=0.002),
+     "C": dict(teacher="cam1", t_epochs=30, t_lr=0.005, s_yaml="p2p4", s_init=None, s_epochs=100, s_lr=0.01),
+     "D": dict(teacher="cam1", t_epochs=30, t_lr=0.005, s_yaml="p3p4", s_init="cam1", s_epochs=60, s_lr=0.004),
+     }[VARIANT]
+T_EPOCHS = 2 if QUICK else V["t_epochs"]
+S_EPOCHS = 2 if QUICK else V["s_epochs"]
 N_COCO = 150 if QUICK else 4000
 RF_RATIO = 0.03 if QUICK else 0.6
 BATCH = 64
@@ -23,27 +34,41 @@ AUG = dict(hsv_h=0.02, hsv_s=0.6, hsv_v=0.5, degrees=10, scale=0.5, fliplr=0.5, 
 subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "ultralytics==8.4.199", "pycocotools"])
 
 INP = Path("/kaggle/input")
-SMALL = [d for d in INP.iterdir() if "coco-2017" not in d.name]      # khong duyet 160k file COCO moi lan tim
+# Kaggle moi: /kaggle/input/datasets/<chu>/<ten>/..., /kaggle/input/competitions/<ten>/..., notebook output...
+# -> duyet 1 lan toan bo /kaggle/input, BO QUA thu muc COCO (160k file), luu danh sach file/thu muc.
+ALL_FILES, ALL_DIRS, COCO_DIRS = [], [], []
+for root, dirs, files in os.walk(INP, followlinks=True):
+    keep = []
+    for d in dirs:
+        if "coco-2017" in d.lower():
+            COCO_DIRS.append(Path(root) / d)
+        else:
+            keep.append(d)
+    dirs[:] = keep
+    ALL_DIRS += [Path(root) / d for d in keep]
+    ALL_FILES += [Path(root) / f for f in files]
+print(f"/kaggle/input: {len(ALL_FILES)} file (khong tinh COCO), COCO: {COCO_DIRS}", flush=True)
 
 
 def find(name):
-    hits = sorted(h for d in SMALL for h in d.rglob(name))
+    hits = sorted(p for p in ALL_FILES if p.name == name)
     assert hits, f"khong thay {name} trong /kaggle/input"
     return hits[0]
 
 
 def find_dir(name):
-    hits = sorted(p for d in SMALL for p in d.rglob(name) if p.is_dir() and (p / "images").is_dir())
+    hits = sorted(p for p in ALL_DIRS if p.name == name and (p / "images").is_dir())
     assert hits, f"khong thay thu muc {name}/images"
     return hits[0]
 
 
 def find_coco():
-    for ann in INP.glob("*coco-2017*/**/annotations/instances_train2017.json"):
-        img = ann.parent.parent / "train2017"
-        if img.is_dir():
-            return ann, img
-    raise AssertionError("khong thay COCO 2017 (instances_train2017.json + train2017/)")
+    for c in COCO_DIRS:
+        for ann in list(c.glob("annotations/instances_train2017.json")) + list(c.glob("*/annotations/instances_train2017.json")):
+            img = ann.parent.parent / "train2017"
+            if img.is_dir():
+                return ann, img
+    raise AssertionError(f"khong thay COCO 2017 trong {COCO_DIRS}")
 
 
 TOOLS = find("coco_paste.py").parent
@@ -100,8 +125,16 @@ btc_sim = mkset(TMP / "btc_sim", [(p, tsim / "labels" / (p.stem + ".txt")) for p
                                   if p.stem.rsplit("_sim", 1)[0] in stems])
 
 # ------------------------------------------------------------------ Roboflow: dien nhan thieu -> zoom (vat du hinh) -> sim
-rfm = find_dir("rf_merged")
-rf_items = [(p, rfm / "labels" / (p.stem + ".txt")) for p in sorted((rfm / "images").iterdir())]
+rf_items = []
+for rname in ("rf_merged", "rf_hotwheels"):   # rf_hotwheels: xe do choi Hot Wheels (neu co trong dataset)
+    try:
+        rfm = find_dir(rname)
+    except AssertionError:
+        print(f"(khong co {rname})", flush=True)
+        continue
+    its = [(p, rfm / "labels" / (p.stem + ".txt")) for p in sorted((rfm / "images").iterdir())]
+    print(f"{rname}: {len(its)} anh", flush=True)
+    rf_items += its
 random.Random(1).shuffle(rf_items)
 if QUICK:
     rf_items = rf_items[:600]
@@ -219,15 +252,70 @@ def evaluate(weights, tag):
     return out
 
 
-RES = {}
-TEACHER_YAML = (TOOLS / "teacher_p2p4s.yaml")
-# ------------------------------------------------------------------ 1) THAY (tu thay cam1)
+RES = {"variant": VARIANT, "cfg": V}
+TEACHER_YAML_S = (TOOLS / "teacher_p2p4s.yaml").read_text().replace(chr(13), "")   # file co the la CRLF
+STUDENT_P3P4 = """nc: 7
+reg_max: 4
+scales:
+  s: [0.33, 0.25, 256]
+backbone:
+  - [-1, 1, Conv, [64, 3, 2]]
+  - [-1, 1, Conv, [128, 3, 2]]
+  - [-1, 2, C3k2, [256, False, 0.25]]
+  - [-1, 1, SCDown, [256, 3, 2]]
+  - [-1, 2, C3k2, [512, False, 0.25]]
+  - [-1, 1, SCDown, [512, 3, 2]]
+  - [-1, 2, C3k2, [512, True]]
+  - [-1, 1, SPPF, [512, 5]]
+  - [-1, 1, nn.Identity, []]
+head:
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]
+  - [[-1, 4], 1, Concat, [1]]
+  - [-1, 2, C3k2, [256, False]]
+  - [-1, 1, SCDown, [256, 3, 2]]
+  - [[-1, 8], 1, Concat, [1]]
+  - [-1, 2, C3k2, [512, True]]
+  - [[11, 14], 1, Detect, [nc]]
+"""
+
+
+def load_matching(model, sd, remap=None):
+    """nap trong so theo ten (+ doi ten lop qua remap), chi lay tensor cung shape"""
+    own = model.state_dict()
+    take = {}
+    for k, v in sd.items():
+        k2 = k
+        for a, b in (remap or {}).items():
+            if k.startswith(a):
+                k2 = b + k[len(a):]
+                break
+        if k2 in own and own[k2].shape == v.shape:
+            take[k2] = v
+    model.load_state_dict(take, strict=False)
+    return len(take), len(own)
+
+
+# ------------------------------------------------------------------ 1) THAY
 t0 = time.time()
-teacher = YOLO(str(TEACHER_YAML)).load(str(find("yolo_cam_teacher.pt")))
+if V["teacher"] == "cam1":
+    tcfg = Path("/tmp/teacher_p2p4s.yaml")
+    tcfg.write_text(TEACHER_YAML_S)
+    teacher = YOLO(str(tcfg)).load(str(find("yolo_cam_teacher.pt")))
+else:   # yolo11m: cung bo cuc P2P4/reg_max 4 (de distill), scale m, backbone 0-6 tu YOLO11m COCO
+    tcfg = Path("/tmp/teacher_p2p4m.yaml")   # ten co 'm' -> Ultralytics chon scale m
+    tcfg.write_text(TEACHER_YAML_S.replace("scales:\n  s: [0.5, 0.5, 1024]", "scales:\n  m: [0.5, 1.0, 512]"))
+    assert "m: [0.5, 1.0, 512]" in tcfg.read_text(), "khong doi duoc scale thay"
+    teacher = YOLO(str(tcfg))
+    coco_sd = YOLO("yolo11m.pt").model.state_dict()
+    bb = {k: v for k, v in coco_sd.items() if int(k.split(".")[1]) <= 6}
+    print("thay yolo11m: nap %d/%d tensor backbone COCO" % load_matching(teacher.model, bb), flush=True)
+    teacher.load(teacher.model)
+print(f"thay: {sum(p.numel() for p in teacher.model.parameters()):,} tham so", flush=True)
 teacher.train(data=str(DS / "data.yaml"), epochs=T_EPOCHS, imgsz=320, batch=BATCH, workers=4, device=0,
-              pretrained=True, optimizer="SGD", lr0=0.005, lrf=0.05, cos_lr=True, warmup_epochs=1,
-              warmup_bias_lr=0.005, project=str(W), name="teacher", exist_ok=True, plots=False, patience=0, seed=0,
-              **AUG)
+              pretrained=True, optimizer="SGD", lr0=V["t_lr"], lrf=0.05, cos_lr=True,
+              warmup_epochs=1 if V["teacher"] == "cam1" else 3,
+              warmup_bias_lr=V["t_lr"] if V["teacher"] == "cam1" else 0.1, project=str(W), name="teacher",
+              exist_ok=True, plots=False, patience=0, seed=0, **AUG)
 TEACHER_W = W / "teacher" / "weights" / "last.pt"
 print(f"thay xong sau {(time.time() - t0) / 60:.1f} phut", flush=True)
 RES["teacher"] = evaluate(TEACHER_W, "thay")
@@ -243,6 +331,9 @@ class KDLoss(v8DetectionLoss):
         total, items = super().loss(preds, batch)
         with torch.no_grad():
             tp = self.parse_output(self.teacher(batch["img"]))
+        n_s = preds["scores"].shape[-1]
+        if tp["scores"].shape[-1] != n_s:   # ban D: tro P3/P4, thay P2/P3/P4 -> chi lay cac o P3/P4 (cuoi danh sach)
+            tp = {"scores": tp["scores"][..., -n_s:], "boxes": tp["boxes"][..., -n_s:]}
         B = preds["scores"].shape[0]
         s_cls, t_cls = preds["scores"].float(), tp["scores"].float()
         t_p = t_cls.sigmoid()
@@ -263,29 +354,52 @@ def attach_kd(trainer):
     t_out = t(torch.zeros(1, 3, 240, 320, device=trainer.device))
     s_out = trainer.model.eval()(torch.zeros(1, 3, 240, 320, device=trainer.device))
     trainer.model.train()
-    assert t_out[1]["boxes"].shape == s_out[1]["boxes"].shape, "Thay va tro khac bo cuc dau ra"
+    tb, sb = t_out[1]["boxes"].shape, s_out[1]["boxes"].shape
+    assert tb[:2] == sb[:2] and tb[2] >= sb[2], f"Thay {tuple(tb)} va tro {tuple(sb)} khac bo cuc dau ra"
     trainer.model.criterion = KDLoss(trainer.model, t)
     print(f"distill tu {TEACHER_W.name} ({sum(p.numel() for p in t.parameters()):,} tham so)", flush=True)
 
 
 t0 = time.time()
-student = YOLO(str(find("student_p2p4.yaml"))).load(str(find("yolo_cam_best.pt")))
+S_SCALE = (1.0, 1.0, 1.5) if V["s_yaml"] == "p2p4" else (1.0, 1.5)   # tam voi x1.5 luon o muc cuoi (P4)
+yolo_reach.apply(S_SCALE)
+if V["s_yaml"] == "p2p4":
+    student = YOLO(str(find("student_p2p4.yaml")))
+else:
+    scfg = Path("/tmp/student_p3p4.yaml")
+    scfg.write_text(STUDENT_P3P4)
+    student = YOLO(str(scfg))
+if V["s_init"] == "cam1":
+    cam1_sd = YOLO(str(find("yolo_cam_best.pt"))).model.state_dict()
+    # P3P4: lop 12/14 = lop 18/20 cua P2P4; Detect muc 0/1 = muc 1/2 cua P2P4
+    remap = {} if V["s_yaml"] == "p2p4" else {
+        "model.18.": "model.12.", "model.20.": "model.14.", "model.21.cv2.1.": "model.15.cv2.0.",
+        "model.21.cv2.2.": "model.15.cv2.1.", "model.21.cv3.1.": "model.15.cv3.0.", "model.21.cv3.2.": "model.15.cv3.1.",
+        "model.21.dfl.": "model.15.dfl."}
+    if V["s_yaml"] != "p2p4":   # bo cac lop P2P4 khong co ten tuong ung (12..17, 21 muc 0) truoc khi doi ten
+        cam1_sd = {k: v for k, v in cam1_sd.items()
+                   if int(k.split(".")[1]) <= 11 or any(k.startswith(a) for a in remap)}
+    print("tro: nap %d/%d tensor tu cam1" % load_matching(student.model, cam1_sd, remap), flush=True)
+    student.load(student.model)
 n = sum(p.numel() for p in student.model.parameters())
+print(f"tro {V['s_yaml']}: {n:,} tham so, khoi tao: {V['s_init'] or 'tu dau'}", flush=True)
 assert n <= 200_000
 student.add_callback("on_train_start", attach_kd)
 student.train(data=str(DS / "data.yaml"), epochs=S_EPOCHS, imgsz=320, batch=BATCH, workers=4, device=0,
-              pretrained=True, optimizer="SGD", lr0=0.002, lrf=0.05, cos_lr=True, warmup_epochs=1,
-              warmup_bias_lr=0.002, project=str(W), name="student", exist_ok=True, plots=False, patience=0, seed=0,
-              **AUG)
+              pretrained=True, optimizer="SGD", lr0=V["s_lr"], lrf=0.05, cos_lr=True,
+              warmup_epochs=1 if V["s_init"] else 3, warmup_bias_lr=V["s_lr"] if V["s_init"] else 0.1,
+              project=str(W), name="student", exist_ok=True, plots=False, patience=0, seed=0, **AUG)
 print(f"tro xong sau {(time.time() - t0) / 60:.1f} phut", flush=True)
 for wn in ("best.pt", "last.pt"):
     RES["student_" + wn] = evaluate(W / "student" / "weights" / wn, "tro_" + wn)
+yolo_reach.apply((1.0, 1.0, 1.5))       # model cu deu P2P4
 RES["cam1_student"] = evaluate(find("yolo_cam_best.pt"), "cam1")
 RES["cam2_student"] = evaluate(find("yolo_cam2_last.pt"), "cam2(da hoc anh that)")
 
 (W / "results_cam.json").write_text(json.dumps(RES, indent=1))
-for src, dst in (("student/weights/best.pt", "yolo_cam3_best.pt"), ("student/weights/last.pt", "yolo_cam3_last.pt"),
-                 ("teacher/weights/last.pt", "yolo_cam3_teacher.pt")):
+for src, dst in (("student/weights/best.pt", f"yolo_cam3{VARIANT}_best.pt"),
+                 ("student/weights/last.pt", f"yolo_cam3{VARIANT}_last.pt"),
+                 ("teacher/weights/last.pt", f"yolo_cam3{VARIANT}_teacher.pt")):
     shutil.copy(W / src, W / dst)
 shutil.rmtree(W / "teacher", ignore_errors=True)
 shutil.rmtree(W / "student", ignore_errors=True)
