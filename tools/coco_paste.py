@@ -132,7 +132,7 @@ def transform(crop, mask, target_px, rng):
     return crop, mask
 
 
-def place(canvas, boxes, crop, mask, cls, rng, tries=40, occlude=False, occ=(0.1, 0.45)):
+def place(canvas, boxes, crop, mask, cls, rng, tries=40, occlude=False, occ=(0.05, 0.15)):
     """occlude=False: chỉ đặt vào chỗ trống. occlude=True: vật mới đè lên MỘT PHẦN vật có sẵn (che occ[0]..occ[1]
     diện tích box bên dưới, không vật nào bị che quá occ[1]) -> model học nhận vật bị che khi đồ xếp sát nhau."""
     h, w = mask.shape
@@ -174,6 +174,7 @@ def main():
     ap.add_argument("--min-px", type=int, default=40, help="cạnh bbox COCO nhỏ nhất (vật đủ chi tiết)")
     ap.add_argument("--max-px", type=float, default=140)
     ap.add_argument("--occlude", type=float, default=0.35, help="xác suất vật dán đè một phần lên vật có sẵn")
+    ap.add_argument("--occ", default="0.05,0.15", help="vật dán đè che bao nhiêu phần box bên dưới (min,max), ~10%%")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--preview", default="")
     a = ap.parse_args()
@@ -194,6 +195,7 @@ def main():
     bgs = load_bg(a.bg)
     lo, hi = map(int, a.per_img.split(","))
     plo, phi = map(float, a.px_per_cm.split(","))
+    occ = tuple(map(float, a.occ.split(",")))
     out = Path(a.out)
     (out / "images").mkdir(parents=True, exist_ok=True)
     (out / "labels").mkdir(parents=True, exist_ok=True)
@@ -216,7 +218,7 @@ def main():
                 continue
             smin, smax = SIZE_CM[name]
             r = transform(*r, min(a.max_px, rng.uniform(smin, smax) * ppc), rng)
-            if r is not None and place(canvas, boxes, *r, NAMES.index(name), rng, occlude=rng.random() < a.occlude):
+            if r is not None and place(canvas, boxes, *r, NAMES.index(name), rng, occlude=rng.random() < a.occlude, occ=occ):
                 counts[name] += 1
                 used[name].add(j)
         name = f"{a.prefix}_{k:05d}"
