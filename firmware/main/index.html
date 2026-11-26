@@ -220,19 +220,23 @@ async function call(url, body, src) {
     if (!r.ok) throw new Error(await r.text());
     const j = await r.json();
     const rt = Math.round(performance.now() - t0);
-    if (src === 'camera') {   // lay dung khung model da thay
-      const buf = new Uint8Array(await (await fetch('/frame.rgb?' + Date.now())).arrayBuffer());
-      const id = new ImageData(W, H);
-      for (let i = 0, k = 0; i < buf.length; i += 3, k += 4) { id.data[k] = buf[i]; id.data[k+1] = buf[i+1]; id.data[k+2] = buf[i+2]; id.data[k+3] = 255; }
-      frame.getContext('2d').putImageData(id, 0, 0);
-      $('saveFrame').disabled = false;
-      draw(frame, j.dets);
+    show(j, rt);              // hien cau tra loi + bang box NGAY (khong doi tai anh)
+    markDone();
+    if (src === 'camera') {   // lay dung khung model da thay: JPEG ~15 KB (/frame.rgb 230 KB rat cham qua WiFi yeu)
+      say('status', 'Đang tải ảnh...');
+      const im = new Image();
+      im.onload = () => {
+        frame.getContext('2d').drawImage(im, 0, 0, W, H);
+        $('saveFrame').disabled = false;
+        draw(frame, j.dets);
+        say('status', '');
+      };
+      im.onerror = () => say('status', 'Không tải được ảnh (/frame.jpg) — kết quả vẫn ở bảng bên dưới', true);
+      im.src = '/frame.jpg?' + Date.now();
     } else {
       draw(upImg, j.dets);
+      say('status', '');
     }
-    show(j, rt);
-    say('status', '');
-    markDone();
   } catch (e) {
     say('status', 'Lỗi: ' + e.message, true);
   }

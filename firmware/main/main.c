@@ -34,6 +34,7 @@
 #include "mdns.h"
 #include "infer.h"
 #include "cam.h"
+#include "img_converters.h"   /* fmt2jpg (esp32-camera) */
 
 #define MAX_Q 512
 #define MAX_DETS 64
@@ -444,6 +445,31 @@ static esp_err_t frame_get(httpd_req_t *req)
     return send_rgb(req);
 }
 
+/* GET /frame.jpg : nhu /frame.rgb nhung nen JPEG (~15 KB thay vi 230 KB) -> web hien anh nhanh qua WiFi yeu.
+ * fmt2jpg coi PIXFORMAT_RGB888 la thu tu B,G,R (to_jpg.cpp dao kenh) -> dao s_body (R,G,B) sang BGR truoc. */
+static esp_err_t frame_jpg_get(httpd_req_t *req)
+{
+    if (!s_have_frame) return httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "chua chay lan nao");
+    static uint8_t *bgr;
+    if (!bgr) bgr = heap_caps_malloc(IMG_BYTES, MALLOC_CAP_SPIRAM);
+    if (!bgr) return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "het bo nho");
+    for (size_t i = 0; i < IMG_BYTES; i += 3) {
+        bgr[i] = s_body[i + 2];
+        bgr[i + 1] = s_body[i + 1];
+        bgr[i + 2] = s_body[i];
+    }
+    uint8_t *jpg = NULL;
+    size_t len = 0;
+    if (!fmt2jpg(bgr, IMG_BYTES, IMG_W, IMG_H, PIXFORMAT_RGB888, 85, &jpg, &len))
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "nen JPEG loi");
+    httpd_resp_set_type(req, "image/jpeg");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+    esp_err_t r = httpd_resp_send(req, (const char *)jpg, len);
+    free(jpg);
+    return r;
+}
+
 /* GET /snap.rgb : chup khung moi, KHONG chay model (thu thap anh camera de fine-tune: tools/capture.py) */
 static esp_err_t snap_get(httpd_req_t *req)
 {
@@ -504,6 +530,7 @@ void app_main(void)
     httpd_register_uri_handler(h, &(httpd_uri_t){.uri = "/run", .method = HTTP_POST, .handler = run_post});
     httpd_register_uri_handler(h, &(httpd_uri_t){.uri = "/run_cam", .method = HTTP_POST, .handler = run_cam_post});
     httpd_register_uri_handler(h, &(httpd_uri_t){.uri = "/frame.rgb", .method = HTTP_GET, .handler = frame_get});
+    httpd_register_uri_handler(h, &(httpd_uri_t){.uri = "/frame.jpg", .method = HTTP_GET, .handler = frame_jpg_get});
     httpd_register_uri_handler(h, &(httpd_uri_t){.uri = "/snap.rgb", .method = HTTP_GET, .handler = snap_get});
     httpd_register_uri_handler(h, &(httpd_uri_t){.uri = "/info", .method = HTTP_GET, .handler = info_get});
     httpd_register_uri_handler(h, &(httpd_uri_t){.uri = "/wifi", .method = HTTP_GET, .handler = wifi_get});
