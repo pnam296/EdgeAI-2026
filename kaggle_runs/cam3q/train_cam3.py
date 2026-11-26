@@ -2,7 +2,7 @@
 # Du lieu train (tao ngay tren Kaggle):
 #   - BTC train 80% + ban mo phong OV7670
 #   - Roboflow: dien nhan thieu bang YOLO11x COCO -> zoom_out (da sua: vat phai DU HINH, khong bi cat) -> mo phong
-#   - COCO 2017: cat vat theo MASK (bottle/cup/wine glass/cell phone/book/mouse), dan len nen BTC dung ti le
+#   - COCO 2017 + LVIS v1: cat vat theo MASK (bottle/cup/phone/book/mouse + box, coc thuy tinh, mug...), dan len nen BTC dung ti le
 #     camera, xoay moi huong -> hang nghin kieu vat khac nhau -> mo phong
 # Test (khong bao gio train): 9 anh mau BTC that, 55 anh camera that (data/cam_real da kiem nhan).
 # Val chon best: BTC val + Roboflow val (5% anh goc giu rieng TRUOC khi ghep mosaic -> khong ro ri).
@@ -154,8 +154,19 @@ run(TOOLS / "sim_ov7670.py", "apply", "--profile", PROFILE, "--src", TMP / "rfv_
 
 # ------------------------------------------------------------------ COCO: cat theo mask -> dan len nen BTC -> sim
 ann, cimg = find_coco()
-run(TOOLS / "coco_paste.py", "--ann", ann, "--images", cimg, "--bg", btc_train, "--out", TMP / "coco_paste",
-    "--n", N_COCO, "--preview", W / "coco_paste_preview.jpg")
+croot = cimg.parent                     # chua train2017/ + val2017/ (anh LVIS nam o ca hai)
+assert (croot / "val2017").is_dir(), f"thieu {croot}/val2017"
+lvis = []
+for part in ("train", "val"):           # LVIS v1: cung anh COCO, them box/carton/coc thuy tinh/mug... co mask
+    z = TMP / f"lvis_v1_{part}.json.zip"
+    subprocess.check_call(["wget", "-q", "-O", str(z), f"https://dl.fbaipublicfiles.com/LVIS/lvis_v1_{part}.json.zip"])
+    subprocess.check_call(["unzip", "-q", "-o", str(z), "-d", str(TMP)])
+    z.unlink()
+    lvis.append(TMP / f"lvis_v1_{part}.json")
+run(TOOLS / "coco_paste.py", "--ann", ann, *[x for p in lvis for x in ("--ann", p)], "--images", croot,
+    "--bg", btc_train, "--out", TMP / "coco_paste", "--n", N_COCO, "--preview", W / "coco_paste_preview.jpg")
+for p in lvis:
+    p.unlink()
 run(TOOLS / "sim_ov7670.py", "apply", "--profile", PROFILE, "--src", TMP / "coco_paste", "--out", TMP / "coco_sim",
     "--copies", 1, "--keep-orig")
 print(f"tao du lieu xong sau {(time.time() - t0) / 60:.1f} phut", flush=True)
