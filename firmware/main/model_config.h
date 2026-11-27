@@ -19,11 +19,10 @@
  * Web/API doi tung lan chay: ?conf=0.5 (ghi de nguong MOI lop) &loc=0.1 &iou=0.6 &agn=1.
  *  CLASS_CONF_INIT: nguong tung lop {bottle, cup, phone, book, mouse, box, toy_car} cho COUNT/EXIST/LIST
  *  LOC_FLOOR      : LOCATION hoi lop X ma khong co box X du nguong -> lay box X diem cao nhat >= LOC_FLOOR
- * Gia tri duoi (model cam2 yolo_cam2_last.pt = cam1 + anh camera that + dan chuot that, P4 x1.5, INT8):
- * tune_answer.py tren 13 anh camera that de rieng (tach theo canh): tong 0.977 (LIST 0.923, LOC 1.000);
- * model cam1 cung tap: 0.458. BTC val 0.882, Roboflow mo phong 0.826. NMS 0.30/0.40/0.45, co/khong gop lop:
- * chenh < 0.005 -> giu 0.40 + gop lop (anh that hay chong 2 box cup/bottle). Nguong rieng tung lop chi loi
- * +0.005 -> dung chung 1 nguong. */
+ * Gia tri duoi: model cam3A (yolo_cam3A_last.pt: cam1 + COCO/LVIS dan theo mask + Roboflow da sua + Hot Wheels,
+ * KHONG co anh camera that; P4 x1.5, INT8). Do dung cau tra loi (anh chua thay): 200 anh khan trang 0.662,
+ * 1075 anh khan trang 0.606 (cam2: 0.469), 9 anh BTC 0.404 (cam2: 0.347). mAP50 INT8 khan200 0.641 (float 0.672).
+ * Nguong giu nhu cam2 (chua chinh lai cho cam3A). */
 #define CONF_THRESH      0.45f
 #define NMS_IOU          0.40f
 #define NMS_AGNOSTIC     1        /* 1: bo box lop khac trung len cung 1 vat (giam false positive) */
