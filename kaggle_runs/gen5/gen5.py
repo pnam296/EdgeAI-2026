@@ -2,6 +2,7 @@
 #   + nen GIAY A0 TRANG tu sinh (canh chung ket) cho ~60% anh, 5-9 vat moi anh (chung ket: du do tren giay)
 #   + vat cat TACO theo mask: chai nhua TRONG SUOT, chai thuy tinh, coc nhua / giay, hop carton
 #   + day chuot (~60% chuot) + day gay nhieu (~15% anh) -> bot nham chuot <-> dien thoai
+#   + SACH TU TAO bia nhieu mau (~40% sach dan, 60% trong do bia XANH BIEN - sach thi mau xanh): bia sac so chi ~0.5
 #   + trong so: mouse 1.8, book 1.5, bottle 1.5, box 1.2, cup 1, phone 1 (gen4 de 0.7 lam tut dien thoai), toy_car 0.8
 import os, sys, subprocess, random, shutil, time, json, tarfile, csv
 from pathlib import Path
@@ -12,7 +13,8 @@ N_PASTE = 160 if QUICK else 6000
 NPROC = 4
 SPLIT_SEED = 42
 CLASS_W = "mouse=1.8,book=1.5,bottle=1.5,box=1.2,cup=1,phone=1,toy_car=0.8"
-PASTE_ARGS = ["--paper-bg", 0.6, "--mouse-cable", 0.6, "--cable-distractor", 0.15, "--class-weights", CLASS_W]
+PASTE_ARGS = ["--paper-bg", 0.6, "--mouse-cable", 0.6, "--cable-distractor", 0.15, "--synth-book", 0.4, "--book-blue", 0.6,
+              "--class-weights", CLASS_W]
 GRABCUT = {"mouse", "cup", "bottle", "toy_car"}
 t_all = time.time()
 subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "pycocotools"])

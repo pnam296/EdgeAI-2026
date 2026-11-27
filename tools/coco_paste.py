@@ -164,6 +164,67 @@ def paper_bg(rng):
     return np.clip(paper, 0, 255).astype(np.uint8)
 
 
+def synth_book(rng, cover_src, blue=0.0):
+    """SÁCH tự tạo, BÌA NHIỀU MÀU: mảng ảnh màu ngẫu nhiên làm bìa + dải tiêu đề với 'chữ' giả + viền,
+    mép giấy trắng ngà (độ dày) ở 1-2 cạnh, đôi khi gáy lò xo. Trả (ảnh, mask) như vật cắt.
+    (model đang quen bìa trơn: bìa sặc sỡ như sách tranh chỉ được ~0.5)"""
+    h = rng.randint(150, 230)
+    w = int(h / rng.uniform(1.25, 1.5))
+    if cover_src is not None and rng.random() < 0.75:
+        src = cover_src
+        sh, sw = src.shape[:2]
+        s = max(w / sw, h / sh) * rng.uniform(1.0, 1.8)
+        src = cv2.resize(src, (max(w, int(sw * s)), max(h, int(sh * s))))
+        y0, x0 = rng.randrange(src.shape[0] - h + 1), rng.randrange(src.shape[1] - w + 1)
+        cover = src[y0:y0 + h, x0:x0 + w].copy()
+        hsv = cv2.cvtColor(cover, cv2.COLOR_BGR2HSV).astype(np.float32)
+        hsv[..., 1] = np.clip(hsv[..., 1] * rng.uniform(1.1, 1.8), 0, 255)   # bìa sặc sỡ hơn ảnh thường
+        cover = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+    else:   # bìa đồ hoạ: nền màu + các mảng hình màu
+        cover = np.full((h, w, 3), [rng.randrange(256) for _ in range(3)], np.uint8)
+        for _ in range(rng.randint(3, 9)):
+            col = [rng.randrange(256) for _ in range(3)]
+            if rng.random() < 0.5:
+                cv2.circle(cover, (rng.randrange(w), rng.randrange(h)), rng.randint(8, w // 2), col, -1)
+            else:
+                x, y = rng.randrange(w), rng.randrange(h)
+                cv2.rectangle(cover, (x, y), (x + rng.randint(10, w), y + rng.randint(8, h // 2)), col, -1)
+    if rng.random() < blue:   # bìa tông XANH BIỂN (sách lúc thi màu xanh): kéo hue về 95-125 (OpenCV), giữ chi tiết
+        hsv = cv2.cvtColor(cover, cv2.COLOR_BGR2HSV).astype(np.float32)
+        hsv[..., 0] = hsv[..., 0] * 0.3 + rng.uniform(95, 125) * 0.7
+        hsv[..., 1] = np.clip(hsv[..., 1] * 0.5 + rng.uniform(90, 230) * 0.5, 0, 255)
+        hsv[..., 2] = np.clip(hsv[..., 2] * rng.uniform(0.8, 1.15), 0, 255)
+        cover = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+    if rng.random() < 0.8:   # dải tiêu đề + 'chữ' giả
+        ty = rng.randint(int(0.05 * h), int(0.35 * h))
+        th = rng.randint(int(0.08 * h), int(0.18 * h))
+        if rng.random() < 0.6:
+            cv2.rectangle(cover, (0, ty), (w, ty + th), [rng.randrange(256) for _ in range(3)], -1)
+        tc = [rng.choice([0, 255, rng.randrange(256)]) for _ in range(3)]
+        for row in range(rng.randint(1, 3)):
+            yy = ty + int((row + 0.6) * th / 3)
+            x = rng.randint(4, 12)
+            while x < w - 10:
+                ln = rng.randint(6, 22)
+                cv2.line(cover, (x, yy), (min(w - 6, x + ln), yy), tc, rng.randint(2, 4))
+                x += ln + rng.randint(4, 8)
+    if rng.random() < 0.5:
+        cv2.rectangle(cover, (2, 2), (w - 3, h - 3), [rng.randrange(256) for _ in range(3)], rng.randint(1, 4))
+    t = rng.randint(3, 8)   # độ dày: mép giấy trắng ngà ở cạnh phải + dưới
+    page = np.full((h + t, w + t, 3), [rng.randint(215, 245)] * 3, np.uint8)
+    for k in range(0, t, 2):
+        page[:, w + k] = page[:, w + k] - 18
+        page[h + k, :] = page[h + k, :] - 18
+    page[:h, :w] = cover
+    if rng.random() < 0.25:   # gáy lò xo
+        for yy in range(6, h - 4, 9):
+            cv2.circle(page, (4, yy), 2, (60, 60, 60), -1)
+    mask = np.zeros(page.shape[:2], np.uint8)
+    mask[:h, :w] = 1
+    mask[t:, t:] = 1
+    return page, mask
+
+
 def draw_cable(canvas, start, rng, color=None):
     """dây cáp cong (Bezier) từ điểm start đi ra ngoài - như dây chuột / dây sạc"""
     x0, y0 = start
@@ -266,6 +327,8 @@ def main():
                     help="thư mục vật cắt hình chữ nhật có index.csv (file,cls,...) - Open Images, Hot Wheels")
     ap.add_argument("--edge-cut", type=float, default=0.15, help="xác suất vật lấn ra ngoài mép khung ảnh (còn >= 50%%)")
     ap.add_argument("--paper-bg", type=float, default=0.0, help="tỉ lệ ảnh dùng nền GIẤY A0 TRẮNG tự sinh (thay nền BTC)")
+    ap.add_argument("--synth-book", type=float, default=0.0, help="tỉ lệ sách dán là sách TỰ TẠO bìa nhiều màu")
+    ap.add_argument("--book-blue", type=float, default=0.0, help="tỉ lệ sách tự tạo có bìa tông xanh biển (sách thi màu xanh)")
     ap.add_argument("--mouse-cable", type=float, default=0.0, help="xác suất vẽ dây cáp cho chuột dán vào")
     ap.add_argument("--cable-distractor", type=float, default=0.0, help="xác suất mỗi ảnh có 1 dây không gắn vật nào")
     ap.add_argument("--class-weights", default="",
@@ -307,6 +370,7 @@ def main():
     (out / "labels").mkdir(parents=True, exist_ok=True)
     classes = sorted(pool)
     cw = [wmap.get(c, 1.0) for c in classes]
+    coco_full = [it for v in pool.values() for it in v if it[0] != "CROP"]
     print("trọng số lớp khi dán: " + ", ".join(f"{c} {w:g}" for c, w in zip(classes, cw)), flush=True)
     counts, tiles, used = defaultdict(int), [], defaultdict(set)
     for k in range(a.n):
@@ -332,8 +396,14 @@ def main():
                 o = rng.choices(same, [wmap.get(NAMES[x[0]], 1.0) for x in same])[0]   # cũng theo trọng số lớp
                 name, near = NAMES[o[0]], o[1:]
             for _try in range(3):   # đặt hụt (vật to, hết chỗ) -> thử vật khác CÙNG lớp, để số vật bám đúng trọng số
-                j = rng.randrange(len(pool[name]))
-                r = cutout(a.images, pool[name][j], rng)
+                if name == "book" and rng.random() < a.synth_book:   # sách tự tạo bìa nhiều màu
+                    j = -1
+                    it = rng.choice(coco_full) if coco_full else None   # ảnh COCO TOÀN CẢNH làm bìa (không lấy ảnh vật cắt)
+                    cov = cv2.imread(str(Path(a.images) / it[0])) if it else None
+                    r = synth_book(rng, cov, a.book_blue)
+                else:
+                    j = rng.randrange(len(pool[name]))
+                    r = cutout(a.images, pool[name][j], rng)
                 if r is None:
                     continue
                 smin, smax = SIZE_CM[name]
