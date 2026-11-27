@@ -24,9 +24,11 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 PY = str(REPO / "Scripts" / "python.exe") if os.name == "nt" else sys.executable
 KAGGLE = str(REPO / "Scripts" / "kaggle.exe") if os.name == "nt" else "kaggle"
-ACCOUNTS = {"A": "phngnam296", "B": "phngnam296", "C": "dohuuminhtri", "D": "dohuuminhtri"}
+ACCOUNTS = {"A": "phngnam296", "B": "phngnam296", "C": "dohuuminhtri", "D": "dohuuminhtri",
+            "R2A": "dohuuminhtri", "R2B": "dohuuminhtri", "R2C": "phngnam296"}
 TESTS = {"BTC mẫu": ["data/btc_samples"],
-         "real55": ["outputs/cam2_data/real55"]}   # = cam_real/train + cam_real/test gộp lại
+         "real55": ["outputs/cam2_data/real55"],   # = cam_real/train + cam_real/test gộp lại
+         "khăn200": ["data/cam_new_test"]}         # 200 ảnh nền khăn trắng, người đã sửa nhãn
 CFG = "0.45,0.40,1,0.08"
 for _s in (sys.stdout, sys.stderr):
     try:
@@ -100,15 +102,15 @@ def main():
     base = {k: answer_acc(REPO / "firmware/main/models/det_model.tflite", "1.5", s) for k, s in TESTS.items()}
     print("\n" + "=" * 110)
     print(f"{'bản':8s} {'cấu hình':38s} | mAP50: {'BTCval':>6s} {'RF':>5s} {'real':>5s} {'BTCmẫu':>6s} | "
-          f"đúng câu trả lời: {'BTC mẫu':>8s} {'real55':>7s}")
+          f"đúng câu trả lời: {'BTC mẫu':>8s} {'real55':>7s} {'khăn200':>8s}")
     fmt = lambda x: f"{x[0]:.3f}" if x else "  -  "
     for name, cfg, st, accs in rows:
         c = f"thay {cfg.get('teacher')} tro {cfg.get('s_yaml')}/{cfg.get('s_init') or 'tu dau'} {cfg.get('s_epochs')}ep"
         m = lambda s: f"{st[s]['map50']:.3f}" if s in st else "  -  "
         print(f"{name:8s} {c:38s} | {'':6s} {m('btc'):>6s} {m('rf'):>5s} {m('real'):>5s} {m('btcmau'):>6s} | "
-              f"{'':17s} {fmt(accs['BTC mẫu']):>8s} {fmt(accs['real55']):>7s}")
+              f"{'':17s} {fmt(accs['BTC mẫu']):>8s} {fmt(accs['real55']):>7s} {fmt(accs['khăn200']):>8s}")
     print(f"{'ESP(cam2)':8s} {'đang nạp firmware (đã train 42/55 real)':38s} | {'':34s} | {'':17s} "
-          f"{fmt(base['BTC mẫu']):>8s} {fmt(base['real55']):>7s}")
+          f"{fmt(base['BTC mẫu']):>8s} {fmt(base['real55']):>7s} {fmt(base['khăn200']):>8s}")
     for name, cfg, st, accs in rows:
         if st.get("btcmau"):
             print(f"  {name} BTC mẫu theo lớp: {st['btcmau']['per_class']}")

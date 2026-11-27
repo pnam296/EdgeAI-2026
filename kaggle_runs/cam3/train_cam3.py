@@ -20,6 +20,10 @@ V = {"A": dict(teacher="cam1", t_epochs=30, t_lr=0.005, s_yaml="p2p4", s_init="c
      "B": dict(teacher="yolo11m", t_epochs=40, t_lr=0.01, s_yaml="p2p4", s_init="cam1", s_epochs=60, s_lr=0.002),
      "C": dict(teacher="cam1", t_epochs=30, t_lr=0.005, s_yaml="p2p4", s_init=None, s_epochs=100, s_lr=0.01),
      "D": dict(teacher="cam1", t_epochs=30, t_lr=0.005, s_yaml="p3p4", s_init="cam1", s_epochs=60, s_lr=0.004),
+     # vong 2 (du lieu gen4, tiet kiem quota): thay = thay cam3 train tiep 15 ep; tro tu tro cam3 (C) train tiep
+     "R2A": dict(teacher="cam3", t_epochs=15, t_lr=0.002, s_yaml="p2p4", s_init="cam3", s_epochs=45, s_lr=0.002, kd=1.0),
+     "R2B": dict(teacher="cam3", t_epochs=15, t_lr=0.002, s_yaml="p2p4", s_init="cam3", s_epochs=45, s_lr=0.002, kd=2.0),
+     "R2C": dict(teacher="cam3", t_epochs=15, t_lr=0.002, s_yaml="p2p4", s_init=None, s_epochs=80, s_lr=0.01, kd=1.0),
      }[VARIANT]
 T_EPOCHS = 2 if QUICK else V["t_epochs"]
 S_EPOCHS = 2 if QUICK else V["s_epochs"]
@@ -27,7 +31,7 @@ N_COCO = 150 if QUICK else 4000
 RF_RATIO = 0.03 if QUICK else 0.6
 BATCH = 64
 DIST_SCALE = (1.0, 1.0, 1.5)
-KD_CLS, KD_BOX = 1.0, 1.0
+KD_CLS = KD_BOX = V.get("kd", 1.0)
 SPLIT_SEED = 42
 AUG = dict(hsv_h=0.02, hsv_s=0.6, hsv_v=0.5, degrees=10, scale=0.5, fliplr=0.5, flipud=0.5, close_mosaic=10)
 
@@ -317,10 +321,19 @@ def load_matching(model, sd, remap=None):
 
 # ------------------------------------------------------------------ 1) THAY
 t0 = time.time()
-if V["teacher"] == "cam1":
+def newest(pattern):
+    """trong so moi nhat khop mau (vd yolo_cam3*_teacher.pt tu output notebook cam3 duoc gan)"""
+    hits = sorted(p for p in ALL_FILES if re.fullmatch(pattern, p.name))
+    assert hits, f"khong thay trong so {pattern}"
+    print("dung trong so:", hits[0], flush=True)
+    return hits[0]
+
+
+if V["teacher"] in ("cam1", "cam3"):
     tcfg = Path("/tmp/teacher_p2p4s.yaml")
     tcfg.write_text(TEACHER_YAML_S)
-    teacher = YOLO(str(tcfg)).load(str(find("yolo_cam_teacher.pt")))
+    teacher = YOLO(str(tcfg)).load(str(find("yolo_cam_teacher.pt") if V["teacher"] == "cam1"
+                                         else newest(r"yolo_cam3[A-D]_teacher\.pt")))
 else:   # yolo11m: cung bo cuc P2P4/reg_max 4 (de distill), scale m, backbone 0-6 tu YOLO11m COCO
     tcfg = Path("/tmp/teacher_p2p4m.yaml")   # ten co 'm' -> Ultralytics chon scale m
     tcfg.write_text(TEACHER_YAML_S.replace("scales:\n  s: [0.5, 0.5, 1024]", "scales:\n  m: [0.5, 1.0, 512]"))
@@ -333,8 +346,8 @@ else:   # yolo11m: cung bo cuc P2P4/reg_max 4 (de distill), scale m, backbone 0-
 print(f"thay: {sum(p.numel() for p in teacher.model.parameters()):,} tham so", flush=True)
 teacher.train(data=str(DS / "data.yaml"), epochs=T_EPOCHS, imgsz=320, batch=BATCH, workers=4, device=0,
               pretrained=True, optimizer="SGD", lr0=V["t_lr"], lrf=0.05, cos_lr=True,
-              warmup_epochs=1 if V["teacher"] == "cam1" else 3,
-              warmup_bias_lr=V["t_lr"] if V["teacher"] == "cam1" else 0.1, project=str(W), name="teacher",
+              warmup_epochs=1 if V["teacher"] != "yolo11m" else 3,
+              warmup_bias_lr=V["t_lr"] if V["teacher"] != "yolo11m" else 0.1, project=str(W), name="teacher",
               exist_ok=True, plots=False, patience=0, seed=0, **AUG)
 TEACHER_W = W / "teacher" / "weights" / "last.pt"
 print(f"thay xong sau {(time.time() - t0) / 60:.1f} phut", flush=True)
@@ -389,8 +402,9 @@ else:
     scfg = Path("/tmp/student_p3p4.yaml")
     scfg.write_text(STUDENT_P3P4)
     student = YOLO(str(scfg))
-if V["s_init"] == "cam1":
-    cam1_sd = YOLO(str(find("yolo_cam_best.pt"))).model.state_dict()
+if V["s_init"] in ("cam1", "cam3"):
+    cam1_sd = YOLO(str(find("yolo_cam_best.pt") if V["s_init"] == "cam1"
+                       else newest(r"yolo_cam3[A-D]_last\.pt"))).model.state_dict()
     # P3P4: lop 12/14 = lop 18/20 cua P2P4; Detect muc 0/1 = muc 1/2 cua P2P4
     remap = {} if V["s_yaml"] == "p2p4" else {
         "model.18.": "model.12.", "model.20.": "model.14.", "model.21.cv2.1.": "model.15.cv2.0.",
@@ -414,6 +428,8 @@ for wn in ("best.pt", "last.pt"):
     RES["student_" + wn] = evaluate(W / "student" / "weights" / wn, "tro_" + wn)
 yolo_reach.apply((1.0, 1.0, 1.5))       # model cu deu P2P4
 RES["cam1_student"] = evaluate(find("yolo_cam_best.pt"), "cam1")
+if V["teacher"] == "cam3":   # moc: tro cam3 vong 1 (diem khoi tao) tren cung tap val/test
+    RES["cam3_init"] = evaluate(newest(r"yolo_cam3[A-D]_last\.pt"), "cam3_init")
 RES["cam2_student"] = evaluate(find("yolo_cam2_last.pt"), "cam2(da hoc anh that)")
 
 (W / "results_cam.json").write_text(json.dumps(RES, indent=1))

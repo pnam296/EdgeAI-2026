@@ -1,0 +1,14 @@
+{
+  "id": "phngnam296/edgeai-cam3r2c",
+  "title": "edgeai cam3r2c",
+  "code_file": "train_cam3.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "enable_internet": true,
+  "competition_sources": ["egde-ai-challenge-2026-lan-2-qualifiers"],
+  "dataset_sources": ["phngnam296/edgeai-cam-data", "phngnam296/edgeai-cam-real", "phngnam296/edgeai-cam3-data"],
+  "kernel_sources": ["phngnam296/edgeai-gen4", "phngnam296/edgeai-cam3a", "phngnam296/edgeai-cam1", "phngnam296/edgeai-cam2"]
+}
