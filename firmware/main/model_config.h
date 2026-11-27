@@ -24,8 +24,10 @@
  * 1075 anh khan trang 0.606 (cam2: 0.469), 9 anh BTC 0.404 (cam2: 0.347). mAP50 INT8 khan200 0.641 (float 0.672).
  * Nguong giu nhu cam2 (chua chinh lai cho cam3A). */
 #define CONF_THRESH      0.45f
-#define NMS_IOU          0.40f
-#define NMS_AGNOSTIC     1        /* 1: bo box lop khac trung len cung 1 vat (giam false positive) */
+/* NMS 0.30, KHONG gop lop: chung ket du do sat nhau tren giay, gop lop hay xoa 1 trong 2 vat khac lop sat nhau.
+ * khan200 (test) 0.645 -> 0.656 (LOCATION 0.789 -> 0.814), khan875 (val) ~0.56 -> 0.573 */
+#define NMS_IOU          0.30f
+#define NMS_AGNOSTIC     0        /* 1: bo box lop khac trung len cung 1 vat; 0: chi NMS trong cung lop */
 /* bottle 0.30: chai nhua TRONG SUOT tren nen sang diem thap (0.45 chi bat 62% chai that, 0.30 ~70%);
  * dung cau tra loi khan1075 0.576 -> 0.580, BTC val 0.886 -> 0.888 (tune_answer --eval-cls bottle=0.3) */
 #define CLASS_CONF_INIT  {0.30f, CONF_THRESH, CONF_THRESH, CONF_THRESH, CONF_THRESH, CONF_THRESH, CONF_THRESH}
