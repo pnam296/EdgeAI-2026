@@ -1,0 +1,13 @@
+{
+  "id": "phngnam296/edgeai-gen5",
+  "title": "edgeai gen5",
+  "code_file": "gen5.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_internet": true,
+  "competition_sources": ["egde-ai-challenge-2026-lan-2-qualifiers"],
+  "dataset_sources": ["phngnam296/edgeai-cam3-data", "phngnam296/edgeai-hotwheels", "phngnam296/edgeai-tools3", "awsaf49/coco-2017-dataset"],
+  "kernel_sources": ["phngnam296/edgeai-gen4", "phngnam296/edgeai-oicrops", "phngnam296/edgeai-tacocrops"]
+}

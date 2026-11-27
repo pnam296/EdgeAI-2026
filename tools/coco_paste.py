@@ -139,6 +139,47 @@ def transform(crop, mask, target_px, rng):
     return crop, mask
 
 
+def paper_bg(rng):
+    """nền GIẤY A0 TRẮNG (cảnh chung kết): trắng ngà hơi ám màu, ánh sáng lệch + tối góc, vân giấy nhẹ;
+    ~50% lộ mép giấy với mặt bàn (gỗ / xám / tối) bên ngoài. Không có vật -> không có nhãn."""
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    base = np.array([rng.uniform(232, 252)] * 3, np.float32) + np.array([rng.uniform(-4, 4) for _ in range(3)], np.float32)
+    paper = np.broadcast_to(base, (H, W, 3)).copy()
+    paper += (xx / W - 0.5)[..., None] * rng.uniform(-20, 20) + (yy / H - 0.5)[..., None] * rng.uniform(-20, 20)
+    r2 = ((xx - rng.uniform(0.3, 0.7) * W) / W) ** 2 + ((yy - rng.uniform(0.3, 0.7) * H) / H) ** 2
+    paper -= (r2 * rng.uniform(0, 40))[..., None]
+    noise = cv2.GaussianBlur(np.random.default_rng(rng.randrange(1 << 30)).normal(0, 1, (H, W)).astype(np.float32),
+                             (0, 0), 1.2)
+    paper += (noise * rng.uniform(1, 3))[..., None]
+    if rng.random() < 0.5:   # lộ mép giấy: bàn bên ngoài
+        table = np.array(rng.choice([(70, 100, 140), (110, 110, 110), (40, 40, 45), (150, 160, 170), (60, 80, 110)]),
+                         np.float32) + np.random.default_rng(rng.randrange(1 << 30)).normal(0, 6, (H, W, 3))
+        ang = np.deg2rad(rng.uniform(-12, 12))
+        cx, cy = rng.uniform(-0.15, 0.15) * W + W / 2, rng.uniform(-0.15, 0.15) * H + H / 2
+        u = (xx - cx) * np.cos(ang) + (yy - cy) * np.sin(ang)
+        v = -(xx - cx) * np.sin(ang) + (yy - cy) * np.cos(ang)
+        inside = (np.abs(u) < rng.uniform(0.42, 0.6) * W) & (np.abs(v) < rng.uniform(0.42, 0.6) * H)
+        m = cv2.GaussianBlur(inside.astype(np.float32), (3, 3), 0.8)[..., None]
+        paper = paper * m + table * (1 - m)
+    return np.clip(paper, 0, 255).astype(np.uint8)
+
+
+def draw_cable(canvas, start, rng, color=None):
+    """dây cáp cong (Bezier) từ điểm start đi ra ngoài - như dây chuột / dây sạc"""
+    x0, y0 = start
+    ang = rng.uniform(0, 2 * np.pi)
+    L = rng.uniform(60, 240)
+    pts = [(x0, y0)]
+    for k in range(1, 4):
+        ang += rng.uniform(-1.0, 1.0)
+        pts.append((pts[-1][0] + np.cos(ang) * L / 3, pts[-1][1] + np.sin(ang) * L / 3))
+    t = np.linspace(0, 1, 60)[:, None]
+    p0, p1, p2, p3 = (np.array(p, np.float32) for p in pts)
+    curve = ((1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t ** 2 * p2 + t ** 3 * p3).astype(np.int32)
+    g = int(rng.uniform(20, 90)) if color is None else color
+    cv2.polylines(canvas, [curve.reshape(-1, 1, 2)], False, (g, g, g), rng.choice([1, 2, 2, 3]), cv2.LINE_AA)
+
+
 def near_pos(o, w, h, rng):
     """vị trí sát cạnh box o (trái/phải/trên/dưới), khe hở -8%..+6 px -> 2 vật cùng lớp nằm sát nhau"""
     x1, y1, x2, y2 = o
@@ -216,6 +257,7 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--n", type=int, default=5000)
     ap.add_argument("--per-img", default="2,5", help="số vật dán mỗi ảnh (min,max)")
+    ap.add_argument("--per-img-paper", default="5,9", help="số vật mỗi ảnh nền giấy (chung kết: đủ đồ trên giấy)")
     ap.add_argument("--px-per-cm", default="4.5,6.5", help="khoảng px/cm (camera cao/thấp)")
     ap.add_argument("--min-px", type=int, default=40, help="cạnh bbox COCO nhỏ nhất (vật đủ chi tiết)")
     ap.add_argument("--max-px", type=float, default=140)
@@ -223,6 +265,9 @@ def main():
     ap.add_argument("--crops", action="append", default=[],
                     help="thư mục vật cắt hình chữ nhật có index.csv (file,cls,...) - Open Images, Hot Wheels")
     ap.add_argument("--edge-cut", type=float, default=0.15, help="xác suất vật lấn ra ngoài mép khung ảnh (còn >= 50%%)")
+    ap.add_argument("--paper-bg", type=float, default=0.0, help="tỉ lệ ảnh dùng nền GIẤY A0 TRẮNG tự sinh (thay nền BTC)")
+    ap.add_argument("--mouse-cable", type=float, default=0.0, help="xác suất vẽ dây cáp cho chuột dán vào")
+    ap.add_argument("--cable-distractor", type=float, default=0.0, help="xác suất mỗi ảnh có 1 dây không gắn vật nào")
     ap.add_argument("--class-weights", default="",
                     help="tỉ lệ chọn lớp khi dán, vd 'book=1.5,mouse=1.5,phone=0.7' (lớp không nêu = 1)")
     ap.add_argument("--same-near", type=float, default=0.25,
@@ -253,6 +298,7 @@ def main():
     print("vật COCO/LVIS dùng được: " + ", ".join(f"{k} {len(v)}" for k, v in pool.items()), flush=True)
     bgs = load_bg(a.bg)
     lo, hi = map(int, a.per_img.split(","))
+    plo_n, phi_n = map(int, a.per_img_paper.split(","))
     plo, phi = map(float, a.px_per_cm.split(","))
     occ = tuple(map(float, a.occ.split(",")))
     wmap = {k: float(v) for k, v in (kv.split("=") for kv in a.class_weights.split(",") if kv)}
@@ -264,15 +310,22 @@ def main():
     print("trọng số lớp khi dán: " + ", ".join(f"{c} {w:g}" for c, w in zip(classes, cw)), flush=True)
     counts, tiles, used = defaultdict(int), [], defaultdict(set)
     for k in range(a.n):
-        ip, lp = rng.choice(bgs)
-        canvas = cv2.resize(cv2.imread(str(ip)), (W, H))
         boxes = []
-        for l in lp.read_text().split("\n"):
-            if l.strip():
-                c, x, y, w, h = map(float, l.split())
-                boxes.append((int(c), (x - w / 2) * W, (y - h / 2) * H, (x + w / 2) * W, (y + h / 2) * H))
+        on_paper = rng.random() < a.paper_bg
+        if on_paper:   # nền giấy A0 trắng (cảnh chung kết), không có vật sẵn
+            canvas = paper_bg(rng)
+        else:
+            ip, lp = rng.choice(bgs)
+            canvas = cv2.resize(cv2.imread(str(ip)), (W, H))
+            for l in lp.read_text().split("\n"):
+                if l.strip():
+                    c, x, y, w, h = map(float, l.split())
+                    boxes.append((int(c), (x - w / 2) * W, (y - h / 2) * H, (x + w / 2) * W, (y + h / 2) * H))
+        if rng.random() < a.cable_distractor:   # dây không gắn vật nào: model không được học "có dây = chuột"
+            draw_cable(canvas, (rng.uniform(0, W), rng.uniform(0, H)), rng)
         ppc = rng.uniform(plo, phi)
-        for _ in range(rng.randint(lo, hi)):
+        n_obj = rng.randint(plo_n, phi_n) if not boxes and on_paper else rng.randint(lo, hi)
+        for _ in range(n_obj):
             name, near = rng.choices(classes, cw)[0], None   # theo trọng số lớp (mặc định đều nhau)
             same = [o for o in boxes if NAMES[o[0]] in pool]
             if same and rng.random() < a.same_near:      # cùng lớp với 1 vật có sẵn, đặt SÁT cạnh nó
@@ -290,6 +343,10 @@ def main():
                                            edge=near is None and rng.random() < a.edge_cut):
                     counts[name] += 1
                     used[name].add(j)
+                    if name == "mouse" and rng.random() < a.mouse_cable:   # dây chuột từ mép thân chuột
+                        _, x1, y1, x2, y2 = boxes[-1]
+                        sp = [((x1 + x2) / 2, y1), ((x1 + x2) / 2, y2), (x1, (y1 + y2) / 2), (x2, (y1 + y2) / 2)]
+                        draw_cable(canvas, sp[rng.randrange(4)], rng)
                     break
         name = f"{a.prefix}_{k:05d}"
         cv2.imwrite(str(out / "images" / (name + ".jpg")), canvas, [cv2.IMWRITE_JPEG_QUALITY, 95])
