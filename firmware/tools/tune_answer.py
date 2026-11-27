@@ -252,6 +252,7 @@ def main():
     ap.add_argument("--n", type=int, default=0, help="giới hạn số ảnh mỗi tập (0 = tất cả)")
     ap.add_argument("--out", default=str(REPO / "outputs" / "tune_answer.json"))
     ap.add_argument("--eval", default="", help="chỉ CHẤM 1 cấu hình, không dò: 'conf,iou,agn,loc' vd '0.45,0.45,1,0.10'")
+    ap.add_argument("--eval-cls", default="", help="ghi đè ngưỡng riêng vài lớp khi --eval, vd 'bottle=0.3,mouse=0.35'")
     args = ap.parse_args()
 
     sets = []
@@ -296,7 +297,11 @@ def main():
     if args.eval:
         cf, iou_e, agn_e, lf = (float(v) for v in args.eval.split(","))
         c = min(combos, key=lambda x: (abs(x[0] - iou_e), x[1] != int(agn_e)))
-        r, per = combined(evals[c], wts, [cf] * NC, lf)
+        thr_e = [cf] * NC
+        for kv in filter(None, args.eval_cls.split(",")):
+            k, v = kv.split("=")
+            thr_e[NAMES.index(k.strip())] = float(v)
+        r, per = combined(evals[c], wts, thr_e, lf)
         print(f"\nCHẤM conf {cf} | NMS IoU {c[0]} agn {c[1]} | LOCATION dự phòng {lf}")
         for (name, items), q in zip(sets, per):
             print(f"   {name:34s} tổng {q['total']:.4f} | C+E {q['count_exist']:.4f} (có {q['ce_present']:.3f}, "

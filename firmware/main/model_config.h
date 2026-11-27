@@ -26,7 +26,9 @@
 #define CONF_THRESH      0.45f
 #define NMS_IOU          0.40f
 #define NMS_AGNOSTIC     1        /* 1: bo box lop khac trung len cung 1 vat (giam false positive) */
-#define CLASS_CONF_INIT  {CONF_THRESH, CONF_THRESH, CONF_THRESH, CONF_THRESH, CONF_THRESH, CONF_THRESH, CONF_THRESH}
+/* bottle 0.30: chai nhua TRONG SUOT tren nen sang diem thap (0.45 chi bat 62% chai that, 0.30 ~70%);
+ * dung cau tra loi khan1075 0.576 -> 0.580, BTC val 0.886 -> 0.888 (tune_answer --eval-cls bottle=0.3) */
+#define CLASS_CONF_INIT  {0.30f, CONF_THRESH, CONF_THRESH, CONF_THRESH, CONF_THRESH, CONF_THRESH, CONF_THRESH}
 #define LOC_FLOOR        0.100f   /* chung ket co DU do tren ban -> cau vi tri hau het hoi vat CO that: du phong co loi.
                                     tune_answer (10% hoi vat vang mat): khan200 LOC 0.789 (vat co 0.790, vang 0.783),
                                     BTC val 0.971. 0.08 hay "bia" vi tri khi vat vang mat; neu de hoi nhieu vat vang -> 0.25 */
