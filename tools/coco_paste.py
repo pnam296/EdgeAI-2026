@@ -33,8 +33,10 @@ COCO2OURS = {
     "mouse_(computer_equipment)": "mouse",
     "box": "box", "carton": "box", "matchbox": "box", "pencil_box": "box", "cigarette_case": "box",
 }
-SIZE_CM = {"bottle": (7, 25), "cup": (7, 12), "phone": (13, 17), "book": (14, 30), "mouse": (9, 13),
-           "box": (10, 30), "toy_car": (5, 13)}
+# canh dai nhin tu tren (cm) - THEO DO VAT THI (do 2026-11-27): dien thoai 16x8, xe 7x3, sach 20x15, hop 13x12 day 9,
+# coc cao 10 duong kinh 8, chai 20x5 va 10x4.5 (chai dung nhin tu tren chi ~5cm), chuot chua do (giu 9-13).
+SIZE_CM = {"bottle": (4.5, 22), "cup": (7, 11), "phone": (15, 17), "book": (18, 22), "mouse": (9, 13),
+           "box": (11, 15), "toy_car": (6, 8)}
 W, H = 320, 240
 
 

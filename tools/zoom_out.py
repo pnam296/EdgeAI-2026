@@ -18,8 +18,8 @@ import numpy as np
 
 W, H = 320, 240
 # canh dai vat (cm) nhin tu camera ~70cm, hoi nghieng. Chai: dung (nhin thay nap+than) -> nam ngang.
-SIZE_CM = {"bottle": (7, 25), "cup": (7, 12), "phone": (13, 17), "book": (14, 30),
-           "mouse": (9, 13), "box": (12, 32), "toy_car": (5, 13)}
+SIZE_CM = {"bottle": (4.5, 22), "cup": (7, 11), "phone": (15, 17), "book": (18, 22),   # do vat thi (2026-11-27)
+           "mouse": (9, 13), "box": (11, 15), "toy_car": (6, 8)}
 IMG_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".webp"}
 
 
