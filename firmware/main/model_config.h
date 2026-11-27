@@ -27,9 +27,9 @@
 #define NMS_IOU          0.40f
 #define NMS_AGNOSTIC     1        /* 1: bo box lop khac trung len cung 1 vat (giam false positive) */
 #define CLASS_CONF_INIT  {CONF_THRESH, CONF_THRESH, CONF_THRESH, CONF_THRESH, CONF_THRESH, CONF_THRESH, CONF_THRESH}
-#define LOC_FLOOR        0.250f   /* 0.08 -> 0.25: hoi vi tri vat KHONG co trong anh, 0.08 hay "bia" vi tri tu box diem thap
-                                    (vd chuot khong co -> tra loi "ben phai" o cho dien thoai). tune_answer co hoi vat vang mat
-                                    (30%): cau LOCATION khan200 0.786 (vang mat dung 0.761 -> 0.873), BTC val 0.960 -> 0.969 */
+#define LOC_FLOOR        0.100f   /* chung ket co DU do tren ban -> cau vi tri hau het hoi vat CO that: du phong co loi.
+                                    tune_answer (10% hoi vat vang mat): khan200 LOC 0.789 (vat co 0.790, vang 0.783),
+                                    BTC val 0.971. 0.08 hay "bia" vi tri khi vat vang mat; neu de hoi nhieu vat vang -> 0.25 */
 
 /* YOLO: so bin DFL moi canh (reg_max trong file .yaml trong yolo_cfg/). Grid baseline khong dung. */
 #define YOLO_REG_MAX     4
