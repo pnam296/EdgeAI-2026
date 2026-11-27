@@ -9,6 +9,7 @@ phát hiện 7 loại đồ vật trên ảnh 320×240 và phân loại ý đị
 | Detection | YOLO P2/P3/P4 tự thiết kế, **191.145 tham số**, train từ đầu, distill từ thầy cũng train từ đầu; mAP@0.5 val 0,982 |
 | Intent | TextCNN 18.213 tham số, accuracy 1,0 trên 20% câu train giữ lại |
 | Chạy lại / kiểm tra | **[`pipeline/`](pipeline/README.md)**: notebook chạy từ trên xuống, kèm trọng số đã nộp |
+| Vòng chung kết | ESP32-S3 + camera OV7670, xem [mục Vòng chung kết](#vòng-chung-kết-esp32-s3--camera-ov7670) |
 
 ## Kiểm tra nhanh cho BTC
 
@@ -77,6 +78,113 @@ Chi tiết kiến trúc, loss và cấu hình train: [`pipeline/README.md`](pipe
 | 18/11 | **`yolo-kd300`: YOLO P2P4 + distill đủ 300 epoch (bài chính thức)** | **0,983** | **99,061** |
 
 Điểm = 0,7 × mAP@0.5 detection × 100 + 30 × accuracy intent.
+
+## Vòng chung kết (ESP32-S3 + camera OV7670)
+
+Cập nhật 27/11/2026. Firmware ở [`firmware/`](firmware/README.md), công cụ dữ liệu ở [`tools/`](tools/README.md),
+các lần train trên Kaggle ở `kaggle_runs/cam*`, `kaggle_runs/gen*`.
+
+### Firmware đang nạp
+
+| | |
+|---|---|
+| Detector | **cam3R3B** (`kaggle_runs/cam3R3B`): YOLO P2P4 ~160k tham số, INT8, tầm với mức P4 ×1.5 |
+| Ngưỡng conf | bottle **0.35**, cup **0.65**, mouse **0.70**, phone / book / box / toy_car 0.45 |
+| NMS | IoU **0.45, gộp lớp** (2 box khác lớp đè lên 1 vật chỉ giữ box điểm cao hơn) |
+| LOCATION | lớp được hỏi không có box đủ ngưỡng thì lấy box điểm cao nhất ≥ 0.10 (`LOC_FLOOR`) |
+
+Cấu hình nằm trong `firmware/main/model_config.h`. Web/API đổi tạm khi chạy được: `?conf=` (mọi lớp), `&iou=`,
+`&agn=`, `&loc=`.
+
+### Bộ test (không bao giờ dùng để train)
+
+| Bộ | Số ảnh | Ghi chú |
+|---|---|---|
+| **khăn200** (`data/cam_new_test`) | 200 | camera thật, nền khăn trắng, giống chung kết nhất, đã sửa nhãn tay |
+| **khăn875** (`data/cam_new_train`) | 875 | cùng đợt chụp, nhãn đã sửa tay (bản nháp cũ ở `labels_prelabel/`) |
+| khăn1075 (`outputs/khan1075`) | 1075 | 200 + 875 gộp |
+| real55 | 55 | camera thật nền bàn (đợt 26/11) |
+| BTC mẫu | 9 | ảnh mẫu thật của BTC |
+
+Chấm bằng `python tools/eval_round.py <bản...>`: tải output Kaggle, xuất INT8, chấm **độ đúng câu trả lời** bằng đúng
+cấu hình firmware (`CFG`, `CFG_CLS` trong script, phải sửa theo mỗi khi đổi `model_config.h`).
+
+### Kết quả (độ đúng câu trả lời, cấu hình firmware hiện tại)
+
+| Bản | BTC mẫu | real55 | khăn200 | khăn875 | khăn1075 |
+|---|---|---|---|---|---|
+| **cam3R3B (đang nạp)** | **0.531** | **0.434** | 0.614 | **0.601** | **0.603** |
+| cam3R3A | 0.507 | 0.397 | 0.623 | 0.595 | 0.600 |
+| cam3R2B | 0.519 | 0.402 | 0.621 | 0.595 | 0.599 |
+
+mAP50 trên ảnh thật (real55) theo lớp, R2B → R3B: bottle 0.74 → 0.82, phone 0.77 → 0.95, mouse 0.44 → 0.66,
+book 0.51 → 0.38.
+
+Các thử nghiệm ngưỡng và NMS trên cam3R2B (khăn200 / khăn875 / BTC mẫu):
+
+| Cấu hình | khăn200 | khăn875 | BTC mẫu |
+|---|---|---|---|
+| NMS 0.30 theo lớp, bottle 0.30 | 0.618 | 0.600 | 0.552 |
+| NMS 0.30 theo lớp, bottle 0.35 | 0.619 | 0.601 | 0.537 |
+| NMS 0.30 theo lớp, bottle 0.40 | 0.618 | 0.602 | 0.530 |
+| NMS 0.30 / 0.45 / 0.60 / 0.70 gộp lớp, bottle 0.35 | 0.613 / 0.615 / 0.611 / 0.607 | 0.591 / 0.587 / 0.581 / 0.580 | 0.527 / 0.527 / 0.533 / 0.533 |
+| **NMS 0.45 gộp lớp, bottle 0.35, cup 0.65, mouse 0.70 (đang dùng)** | **0.621** | **0.595** | **0.519** |
+
+NMS theo lớp cho điểm cao hơn một chút nhưng hay ra 2 label khác lớp đè lên cùng một vật, nên đội chọn gộp lớp.
+
+Độ khớp kích thước box (cam3R3B, khăn1075, box đoán / nhãn, trung vị): mọi lớp 1.00–1.08, IoU trung bình 0.75–0.87.
+Box cup nhỏ hơn cái cốc chỉ là trường hợp lẻ (~5% số cốc có IoU < 0.5), không phải lỗi hệ thống.
+
+### Dữ liệu train của cam3R3B (~27.300 ảnh 320×240)
+
+| Nguồn | Số ảnh | Nội dung |
+|---|---|---|
+| Dán vật (gen5, `kaggle_runs/gen5`) | 12.000 | 6.000 ảnh dán + bản mô phỏng OV7670; 5–9 vật mỗi ảnh, xoay mọi hướng |
+| Roboflow | 10.508 | 60% các bộ bottle, cup, book, box, mouse, phone, toy car, Hot Wheels; nhãn thiếu điền bằng YOLO11x, zoom-out, mô phỏng camera |
+| Ảnh BTC 3D | 4.800 | 80% train BTC, chỉ bản mô phỏng OV7670 |
+
+- Vật cắt theo mask để dán: COCO 2017 + LVIS (bottle 4022, cup 4041, phone 2926, box 2221, book 1713, mouse 945),
+  Open Images 8.714, TACO 655 (chai nhựa trong, chai thủy tinh, cốc, hộp carton), Hot Wheels 2.503.
+- gen5: ~60% ảnh nền giấy A0 trắng; ~60% chuột có dây; ~15% ảnh có dây gây nhiễu; 40% sách là sách tự tạo bìa (60% bìa
+  xanh); trọng số dán mouse 1.8, book 1.5, bottle 1.5, box 1.2, cup 1, phone 1, toy_car 0.8.
+- Train: thầy cam3 train tiếp 15 epoch; trò P2P4 khởi tạo từ trò cam3, 45 epoch, distill hệ số 2.0.
+- Val chọn checkpoint: 1.200 ảnh BTC val + 460 ảnh Roboflow val.
+- **Không có ảnh camera OV7670 thật nào trong train**, góc nhìn thẳng từ trên xuống rất ít, khoảng cách 85 cm chưa
+  được kiểm riêng.
+
+### Vì sao bottle vẫn thấp (cam3R3B, 338 chai trong khăn1075)
+
+Bắt đúng 64% số chai. Chai bị sót có điểm bottle trung vị 0.23, nên hạ ngưỡng không cứu được. Có 104 lần báo chai sai.
+Lưu ý: khăn1075 gồm nhiều khung liên tiếp của cùng một cảnh, nên một vật có thể bị đếm nhiều lần.
+
+| Nhóm | Số chai | Bắt được |
+|---|---|---|
+| Đứng, to, không bị che | 161 | 73% |
+| Nằm ngang | 89 | 81% |
+| **Chồng lên / dựa vào vật khác** | 61 | **46%** |
+| **Nhỏ (cạnh dài < 40 px)** | 27 | **7%** |
+
+Nguyên nhân:
+1. **Che khuất:** `coco_paste.py` không cho vật bị che quá 15%, chỉ ~20% vật được dán đè, nên model hầu như chưa thấy
+   chai đứng trên hoặc dựa vào hộp. NMS gộp lớp còn hay để box hộp xoá box chai.
+2. **Chai nhựa trong suốt trên nền trắng:** gần như không có tương phản. Train chỉ có 655 chai TACO (phần lớn bị bóp
+   méo); chai COCO đa số là chai thủy tinh hoặc chai đục, chụp ngang.
+3. **Chai nhỏ ở xa:** vật COCO phải có cạnh ≥ 40 px (`--min-px 40`) mới được chọn.
+4. **Báo sai ở cuộn dây cáp đen** (~40% số lần báo sai đã xem): gen5 chỉ có dây kéo dài, không có dây cuộn tròn.
+5. **Nhãn còn sót:** ~10–15% "báo sai" là chai thật chưa gán nhãn trong khăn875; vài nhãn bottle đáng ngờ (vd ảnh 507).
+
+Ngoài ra ~9% chai bị nhận thành cup (real55: 16%). Góc nhìn thẳng từ trên xuống cũng kém, vì chai chỉ còn là một hình
+tròn giống miệng cốc, mà train hầu như không có góc này.
+
+### Việc tiếp theo (đề xuất gen6)
+
+1. Tăng che khuất khi dán (`--occlude` 0.2 → 0.4, che tối đa 15% → 40%), thêm kiểu chai dựa hoặc đứng trên hộp/sách.
+2. Thêm chai trong suốt (Roboflow plastic/water bottle, tăng tỉ lệ TACO), thêm chai nhìn từ trên xuống.
+3. Dây cuộn tròn làm nền (dán vào, không gán nhãn).
+4. Hạ `--min-px`, thêm vật cỡ 20–40 px.
+5. Sửa các chai chưa gán nhãn trong khăn875 (người sửa tay).
+6. Chụp bộ ảnh mới bằng camera ESP ở 85 cm (cả góc thẳng xuống), tách riêng khỏi bộ khăn: dùng để test khoảng cách,
+   và nếu đội đồng ý thì một phần dùng để train.
 
 ## Cấu trúc repo
 

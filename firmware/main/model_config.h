@@ -19,18 +19,20 @@
  * Web/API doi tung lan chay: ?conf=0.5 (ghi de nguong MOI lop) &loc=0.1 &iou=0.6 &agn=1.
  *  CLASS_CONF_INIT: nguong tung lop {bottle, cup, phone, book, mouse, box, toy_car} cho COUNT/EXIST/LIST
  *  LOC_FLOOR      : LOCATION hoi lop X ma khong co box X du nguong -> lay box X diem cao nhat >= LOC_FLOOR
- * Gia tri duoi: model cam3A (yolo_cam3A_last.pt: cam1 + COCO/LVIS dan theo mask + Roboflow da sua + Hot Wheels,
- * KHONG co anh camera that; P4 x1.5, INT8). Do dung cau tra loi (anh chua thay): 200 anh khan trang 0.662,
- * 1075 anh khan trang 0.606 (cam2: 0.469), 9 anh BTC 0.404 (cam2: 0.347). mAP50 INT8 khan200 0.641 (float 0.672).
- * Nguong giu nhu cam2 (chua chinh lai cho cam3A). */
+ * Gia tri duoi: model cam3R3B (kaggle_runs/cam3R3B: thay cam3 + tro P2P4 khoi tao tu cam3, du lieu gen5, KD 2.0,
+ * KHONG co anh camera that; P4 x1.5, INT8). Do dung cau tra loi voi cau hinh duoi (anh chua thay): khan200 0.614,
+ * khan875 0.601, khan1075 0.603, 9 anh BTC 0.531, real55 0.434. Model truoc: cam3A (4153b48). */
 #define CONF_THRESH      0.45f
-/* NMS 0.30, KHONG gop lop: chung ket du do sat nhau tren giay, gop lop hay xoa 1 trong 2 vat khac lop sat nhau.
- * khan200 (test) 0.645 -> 0.656 (LOCATION 0.789 -> 0.814), khan875 (val) ~0.56 -> 0.573 */
-#define NMS_IOU          0.30f
-#define NMS_AGNOSTIC     0        /* 1: bo box lop khac trung len cung 1 vat; 0: chi NMS trong cung lop */
+/* NMS 0.45, GOP LOP (nguoi dung chon: tranh 2 label khac lop de len cung 1 vat).
+ * cam3R2B + nguong duoi: khan200 0.621, khan875 0.595, BTC mau 0.519 (gop lop 0.30: 0.617/0.596/0.519;
+ * 0.30 theo lop + chi bottle 0.35: 0.619/0.601/0.537). Truoc do: 0.30 theo lop (c6fe430). */
+#define NMS_IOU          0.45f
+#define NMS_AGNOSTIC     1        /* 1: bo box lop khac trung len cung 1 vat; 0: chi NMS trong cung lop */
 /* bottle 0.30: chai nhua TRONG SUOT tren nen sang diem thap (0.45 chi bat 62% chai that, 0.30 ~70%);
- * dung cau tra loi khan1075 0.576 -> 0.580, BTC val 0.886 -> 0.888 (tune_answer --eval-cls bottle=0.3) */
-#define CLASS_CONF_INIT  {0.30f, CONF_THRESH, CONF_THRESH, CONF_THRESH, CONF_THRESH, CONF_THRESH, CONF_THRESH}
+ * dung cau tra loi khan1075 0.576 -> 0.580, BTC val 0.886 -> 0.888 (tune_answer --eval-cls bottle=0.3)
+ * Thu cam3R2B: bottle 0.35 (nguoi dung chot): khan200 0.619, khan875 0.601, BTC mau 0.537 (0.30: 0.618/0.600/0.552; 0.40 cho khan200 0.618 -> 0.618, khan875 0.600 -> 0.602, BTC mau 0.552 -> 0.530) */
+/* cup 0.65, mouse 0.70 (nguoi dung chon): bot bao nham coc/chuot */
+#define CLASS_CONF_INIT  {0.35f, 0.65f, CONF_THRESH, CONF_THRESH, 0.70f, CONF_THRESH, CONF_THRESH}
 #define LOC_FLOOR        0.100f   /* chung ket co DU do tren ban -> cau vi tri hau het hoi vat CO that: du phong co loi.
                                     tune_answer (10% hoi vat vang mat): khan200 LOC 0.789 (vat co 0.790, vang 0.783),
                                     BTC val 0.971. 0.08 hay "bia" vi tri khi vat vang mat; neu de hoi nhieu vat vang -> 0.25 */

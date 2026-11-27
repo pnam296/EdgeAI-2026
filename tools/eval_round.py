@@ -5,10 +5,10 @@
 
 Mỗi bản: tải yolo_cam3<V>_last.pt + results_cam.json + log (tài khoản theo ACCOUNTS), xuất TFLite INT8
 (calibrate bằng ảnh BTC + data/ov7670, KHÔNG dùng ảnh test), rồi tune_answer --eval với cấu hình firmware
-(conf 0.45, NMS 0.40 gộp lớp, loc 0.08) trên:
+(conf 0.45, NMS 0.45 gộp lớp, loc 0.10, bottle/cup/mouse riêng) trên:
   - BTC mẫu : 9 ảnh mẫu thật của BTC (data/btc_samples) - giống chung kết nhất
   - real55  : 55 ảnh camera thật đã kiểm nhãn (outputs/cam2_data/cam_real/{train,test})
-So với model đang nạp ESP (cam2 - LƯU Ý: cam2 đã train trên 42/55 ảnh real55 nên số real55 của nó lạc quan).
+So với model đang nạp ESP (firmware/main/models/det_model.tflite).
 Token tài khoản thứ 2 đọc từ biến môi trường KAGGLE_TOKEN_FRIEND (không ghi vào file).
 """
 from __future__ import annotations
@@ -30,9 +30,10 @@ ACCOUNTS = {"A": "phngnam296", "B": "phngnam296", "C": "dohuuminhtri", "D": "doh
 TESTS = {"BTC mẫu": ["data/btc_samples"],
          "real55": ["outputs/cam2_data/real55"],   # = cam_real/train + cam_real/test gộp lại
          "khăn200": ["data/cam_new_test"],         # 200 ảnh nền khăn trắng, người đã sửa nhãn (giống chung kết)
-         "khăn1075": ["outputs/khan1075"]}          # 200 trên + 875 ảnh nhãn nháp
-CFG = "0.45,0.40,1,0.10"        # = firmware: conf 0.45, NMS 0.40 gộp lớp, LOC_FLOOR 0.10
-CFG_CLS = "bottle=0.3"         # = firmware: ngưỡng riêng chai
+         "khăn875": ["data/cam_new_train"],        # 875 ảnh khăn trắng còn lại, người đã sửa nhãn
+         "khăn1075": ["outputs/khan1075"]}          # 200 + 875 gộp (đều đã sửa nhãn)
+CFG = "0.45,0.45,1,0.10"        # = firmware: conf 0.45, NMS 0.45 gộp lớp, LOC_FLOOR 0.10
+CFG_CLS = "bottle=0.35,cup=0.65,mouse=0.7"  # = firmware: ngưỡng riêng từng lớp
 for _s in (sys.stdout, sys.stderr):
     try:
         _s.reconfigure(encoding="utf-8")
@@ -105,15 +106,15 @@ def main():
     base = {k: answer_acc(REPO / "firmware/main/models/det_model.tflite", "1.5", s) for k, s in TESTS.items()}
     print("\n" + "=" * 110)
     print(f"{'bản':8s} {'cấu hình':38s} | mAP50: {'BTCval':>6s} {'RF':>5s} {'real':>5s} {'BTCmẫu':>6s} | "
-          f"đúng câu trả lời: {'BTC mẫu':>8s} {'real55':>7s} {'khăn200':>8s} {'khăn1075':>9s}")
+          f"đúng câu trả lời: {'BTC mẫu':>8s} {'real55':>7s} {'khăn200':>8s} {'khăn875':>8s} {'khăn1075':>9s}")
     fmt = lambda x: f"{x[0]:.3f}" if x else "  -  "
     for name, cfg, st, accs in rows:
         c = f"thay {cfg.get('teacher')} tro {cfg.get('s_yaml')}/{cfg.get('s_init') or 'tu dau'} {cfg.get('s_epochs')}ep"
         m = lambda s: f"{st[s]['map50']:.3f}" if s in st else "  -  "
         print(f"{name:8s} {c:38s} | {'':6s} {m('btc'):>6s} {m('rf'):>5s} {m('real'):>5s} {m('btcmau'):>6s} | "
-              f"{'':17s} {fmt(accs['BTC mẫu']):>8s} {fmt(accs['real55']):>7s} {fmt(accs['khăn200']):>8s} {fmt(accs['khăn1075']):>9s}")
-    print(f"{'ESP(cam2)':8s} {'đang nạp firmware (đã train 42/55 real)':38s} | {'':34s} | {'':17s} "
-          f"{fmt(base['BTC mẫu']):>8s} {fmt(base['real55']):>7s} {fmt(base['khăn200']):>8s} {fmt(base['khăn1075']):>9s}")
+              f"{'':17s} {fmt(accs['BTC mẫu']):>8s} {fmt(accs['real55']):>7s} {fmt(accs['khăn200']):>8s} {fmt(accs['khăn875']):>8s} {fmt(accs['khăn1075']):>9s}")
+    print(f"{'ESP':8s} {'đang nạp firmware (main/models)':38s} | {'':34s} | {'':17s} "
+          f"{fmt(base['BTC mẫu']):>8s} {fmt(base['real55']):>7s} {fmt(base['khăn200']):>8s} {fmt(base['khăn875']):>8s} {fmt(base['khăn1075']):>9s}")
     for name, cfg, st, accs in rows:
         if st.get("btcmau"):
             print(f"  {name} BTC mẫu theo lớp: {st['btcmau']['per_class']}")

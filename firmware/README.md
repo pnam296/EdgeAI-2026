@@ -58,6 +58,19 @@ idf.py menuconfig          # ESP32-S3 Infer → WiFi SSID / password
 idf.py -p /dev/ttyACM0 flash monitor     # Windows: -p COMx
 ```
 
+Windows (máy đội, ESP-IDF 6.1 ở `F:\esp`): mở PowerShell rồi nạp môi trường trước khi gọi `idf.py`:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+Remove-Item Env:MSYSTEM -ErrorAction SilentlyContinue   # export.ps1 từ chối chạy nếu thấy biến của Git Bash/MSYS
+$env:IDF_TOOLS_PATH = "F:\esp	ools"
+. F:\esp\esp-idf\export.ps1
+idf.py -p COM3 flash monitor
+```
+
+Flash báo `Access to the port 'COM3' is denied` nghĩa là cổng đang bị chương trình khác giữ (thường là một
+`idf.py monitor` khác): thoát monitor (`Ctrl+]`) rồi flash lại.
+
 - Để trống SSID (hoặc kết nối WiFi lỗi) thì ESP tự phát WiFi **`ESP32S3-INFER`**, mật khẩu `12345678`, rồi mở http://192.168.4.1/
 - Kết nối WiFi nhà thì mở địa chỉ IP in ra trong log.
 
