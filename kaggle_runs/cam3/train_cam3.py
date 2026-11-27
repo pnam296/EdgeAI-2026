@@ -24,6 +24,9 @@ V = {"A": dict(teacher="cam1", t_epochs=30, t_lr=0.005, s_yaml="p2p4", s_init="c
      "R2A": dict(teacher="cam3", t_epochs=15, t_lr=0.002, s_yaml="p2p4", s_init="cam3", s_epochs=45, s_lr=0.002, kd=1.0),
      "R2B": dict(teacher="cam3", t_epochs=15, t_lr=0.002, s_yaml="p2p4", s_init="cam3", s_epochs=45, s_lr=0.002, kd=2.0),
      "R2C": dict(teacher="cam3", t_epochs=15, t_lr=0.002, s_yaml="p2p4", s_init=None, s_epochs=80, s_lr=0.01, kd=1.0),
+     # vong 3 (du lieu gen5: giay A0 trang, day chuot, TACO, sach tu tao bia xanh): giong R2A/R2B
+     "R3A": dict(teacher="cam3", t_epochs=15, t_lr=0.002, s_yaml="p2p4", s_init="cam3", s_epochs=45, s_lr=0.002, kd=1.0),
+     "R3B": dict(teacher="cam3", t_epochs=15, t_lr=0.002, s_yaml="p2p4", s_init="cam3", s_epochs=45, s_lr=0.002, kd=2.0),
      }[VARIANT]
 T_EPOCHS = 2 if QUICK else V["t_epochs"]
 S_EPOCHS = 2 if QUICK else V["s_epochs"]
