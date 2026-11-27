@@ -1,0 +1,13 @@
+{
+  "id": "phngnam296/edgeai-tacocrops",
+  "title": "edgeai tacocrops",
+  "code_file": "tacocrops.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_internet": true,
+  "dataset_sources": ["kneroma/tacotrashdataset"],
+  "competition_sources": [],
+  "kernel_sources": []
+}
