@@ -219,10 +219,14 @@ class Evaluator:
         if loc_floor is not None:
             fb = self.best_region(self.sc >= loc_floor)
             pr = np.where(pr >= 0, pr, fb)
-        loc = (pr[q] == self.loc[q]).mean() if q.any() else 1.0
+        loc_p = (pr[q] == self.loc[q]).mean() if q.any() else 1.0
+        qa = self.g == 0   # hỏi vị trí vật KHÔNG có trong ảnh: đúng khi không chỉ ra vị trí nào ("Không thấy ...")
+        loc_a = (pr[qa] < 0).mean() if qa.any() else 1.0
+        loc = (1 - self.absent_w) * loc_p + self.absent_w * loc_a
         total = (W_CE * ce + W_LIST * lst + W_LOC * loc) / (W_CE + W_LIST + W_LOC)
         return {"total": float(total), "count_exist": float(ce), "ce_present": float(ce_p),
                 "ce_absent": float(ce_a), "list": float(lst), "location": float(loc),
+                "loc_present": float(loc_p), "loc_absent": float(loc_a),
                 "n_loc_q": int(q.sum())}
 
 
@@ -296,7 +300,7 @@ def main():
         print(f"\nCHẤM conf {cf} | NMS IoU {c[0]} agn {c[1]} | LOCATION dự phòng {lf}")
         for (name, items), q in zip(sets, per):
             print(f"   {name:34s} tổng {q['total']:.4f} | C+E {q['count_exist']:.4f} (có {q['ce_present']:.3f}, "
-                  f"không {q['ce_absent']:.3f}) | LIST {q['list']:.4f} | LOC {q['location']:.4f} ({q['n_loc_q']} câu)")
+                  f"không {q['ce_absent']:.3f}) | LIST {q['list']:.4f} | LOC {q['location']:.4f} (có {q['loc_present']:.3f}, không {q['loc_absent']:.3f}; {q['n_loc_q']} câu)")
         return
 
     # 1) NMS + conf chung
