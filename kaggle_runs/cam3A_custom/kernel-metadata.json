@@ -1,0 +1,17 @@
+{
+  "id": "dohuuminhtri/edgeai-cam3a-custom",
+  "title": "edgeai cam3a custom",
+  "code_file": "train_cam3a_custom.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "enable_internet": true,
+  "competition_sources": [],
+  "dataset_sources": [
+    "dohuuminhtri/edgeai-cam3-all",
+    "dohuuminhtri/edgeai-cam-custom-ds"
+  ],
+  "kernel_sources": []
+}

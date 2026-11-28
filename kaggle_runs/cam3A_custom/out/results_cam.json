@@ -1,0 +1,77 @@
+{
+  "variant": "cam3A_custom",
+  "train_imgs": 1075,
+  "val_imgs": 215,
+  "t_epochs": 30,
+  "s_epochs": 60,
+  "dist_scale": [
+    1.0,
+    1.0,
+    1.5
+  ],
+  "cam1_baseline": {
+    "map50": 0.6558,
+    "map50_95": 0.4753,
+    "per_class": {
+      "bottle": 0.735,
+      "cup": 0.713,
+      "phone": 0.809,
+      "book": 0.237,
+      "mouse": 0.779,
+      "box": 0.509,
+      "toy_car": 0.809
+    }
+  },
+  "teacher_best": {
+    "map50": 0.9605,
+    "map50_95": 0.793,
+    "per_class": {
+      "bottle": 0.976,
+      "cup": 0.974,
+      "phone": 0.973,
+      "book": 0.991,
+      "mouse": 0.966,
+      "box": 0.983,
+      "toy_car": 0.861
+    }
+  },
+  "teacher_last": {
+    "map50": 0.9548,
+    "map50_95": 0.785,
+    "per_class": {
+      "bottle": 0.977,
+      "cup": 0.965,
+      "phone": 0.971,
+      "book": 0.988,
+      "mouse": 0.967,
+      "box": 0.983,
+      "toy_car": 0.832
+    }
+  },
+  "student_best.pt": {
+    "map50": 0.9448,
+    "map50_95": 0.7263,
+    "per_class": {
+      "bottle": 0.965,
+      "cup": 0.967,
+      "phone": 0.955,
+      "book": 0.976,
+      "mouse": 0.94,
+      "box": 0.972,
+      "toy_car": 0.839
+    }
+  },
+  "student_last.pt": {
+    "map50": 0.9361,
+    "map50_95": 0.7133,
+    "per_class": {
+      "bottle": 0.958,
+      "cup": 0.967,
+      "phone": 0.953,
+      "book": 0.983,
+      "mouse": 0.917,
+      "box": 0.962,
+      "toy_car": 0.813
+    }
+  }
+}
