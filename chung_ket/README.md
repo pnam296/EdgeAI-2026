@@ -51,6 +51,9 @@ nằm trong `weights/`; chạy lại notebook cho model tương đương.
 
 ## 3. Dữ liệu
 
+> **Danh sách đầy đủ kèm link (dữ liệu tự thu thập, dữ liệu ngoài, Roboflow, pretrained): [`DU_LIEU_VA_PRETRAINED.md`](DU_LIEU_VA_PRETRAINED.md).**
+> Ảnh camera thật tự thu (1.222 ảnh + nhãn) có sẵn trong repo: [`data/cam_real_ov7670/`](data/cam_real_ov7670).
+
 | Dữ liệu | Nguồn | Dùng ở |
 |---|---|---|
 | Ảnh + nhãn BTC (train/val), câu hỏi `intent_train.csv` | BTC | 05–08, 10 |
@@ -109,7 +112,7 @@ Cấu hình chính (`firmware/main/model_config.h`, `logic.h`):
 ## Cấu trúc repo
 
 ```
-chung_ket/        <- BÀI NỘP: notebook, trọng số, README này
+chung_ket/        <- BÀI NỘP: README này, DU_LIEU_VA_PRETRAINED.md, notebooks/, weights/, data/cam_real_ov7670/
 firmware/         <- firmware ESP32-S3 thi đấu (main/, models/*.cc, tools/ để kiểm tra)
 tools/            <- script dùng chung (train_intent.py, yolo_reach.py, sinh dữ liệu…)
 yolo_cfg/         <- yaml kiến trúc thầy / trò
