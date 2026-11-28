@@ -8,6 +8,12 @@ Hỏi đáp về đồ vật chạy hoàn toàn trên **ESP32-S3 + camera OV7670
 câu hỏi ──► TextCNN INT8 (186.117 tham số) ──► intent ─────────┘
 ```
 
+## Bắt đầu từ đâu
+
+1. **Nạp firmware và chạy thử:** làm theo [`firmware/README.md`](../firmware/README.md) (build → nạp → kết nối WiFi → hỏi).
+2. **Xem dữ liệu và pretrained đã dùng:** [`DU_LIEU_VA_PRETRAINED.md`](DU_LIEU_VA_PRETRAINED.md)
+3. **Train lại model:** chạy notebook theo thứ tự ở mục [Thứ tự notebook](#thứ-tự-notebook) bên dưới.
+
 ## Nội dung
 
 | Thư mục | Nội dung |
