@@ -160,6 +160,8 @@ int decode_yolo(const qtensor_t *box, const qtensor_t *cls, int nlevels, int img
             }
     }
     int k = nms(s_cand, n, p->iou, p->agnostic);
+    if (!p->agnostic && YOLO_CROSS_NMS_IOU < 1.0f)
+        k = nms(s_cand, k, YOLO_CROSS_NMS_IOU, 1);
     if (k > max) k = max;
     memcpy(out, s_cand, k * sizeof(det_t));
     return k;

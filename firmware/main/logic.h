@@ -45,6 +45,12 @@ int decode_yolo(const qtensor_t *box, const qtensor_t *cls, int nlevels, int img
 #define YOLO_DIST_SCALE_LAST 1.5f
 #endif
 
+/* Tang 2 NMS khac lop (chi chay khi p->agnostic == 0 va < 1.0f):
+ * xoa box khac lop de khit len cung 1 vat (IoU > 0.60) ma van giu 2 vat khac lop dat sat nhau. */
+#ifndef YOLO_CROSS_NMS_IOU
+#define YOLO_CROSS_NMS_IOU 0.60f
+#endif
+
 /* lowercase, ky tu khong phai [a-z0-9] -> ' ' (giong normalize() cua pipeline: re.sub(r"[^a-z0-9 ]", " ")) */
 void normalize_text(char *s);
 

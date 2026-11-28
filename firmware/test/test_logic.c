@@ -59,6 +59,25 @@ static void test_yolo(void)
     assert(decode_yolo(&b, &c, 1, 320, 240, RM, &p, d, 16) == 4);
     p.conf = 0.8f;
     assert(decode_yolo(&b, &c, 1, 320, 240, RM, &p, d, 16) == 2);
+
+    /* tang 2 cross-class NMS: 2 box khac lop chong khit (IoU > 0.60) -> chi giu diem cao hon;
+     * 2 box khac lop lech nhau (IoU < 0.60) -> giu ca 2 */
+    memset(ybox, 0, sizeof ybox);
+    memset(ycls, -100, sizeof ycls);
+    yput(7, 5, 5, 3.0f, 2);       /* box diem cao 0.95 */
+    yput(7, 5, 2, 2.0f, 2);       /* phone cung o (IoU 1.0) -> khong sinh ra vi 1 cell chi chon 1 best cls */
+    yput(7, 6, 2, 2.0f, 2);       /* phone lech 1 cell: canh 4 cell -> giao 3x4=12, hop 20 -> IoU 0.60 -> giu; */
+    yput(7, 5, 5, 3.0f, 3);       /* box canh 6 cell tai (7,5) */
+    yput(7, 6, 2, 2.0f, 3);       /* phone canh 6 cell tai (7,6) -> giao 5x6=30, hop 42 -> IoU 0.71 > 0.60 -> bo phone */
+    p.conf = 0.3f; p.iou = 0.3f; p.agnostic = 0;
+    int nc2 = decode_yolo(&b, &c, 1, 320, 240, RM, &p, d, 16);
+    assert(nc2 == 1 && d[0].cls == 5);
+    /* doi phone sang (7,8): giao 3x6=18, hop 54 -> IoU 0.33 <= 0.60 -> giu ca 2 du NMS cung lop la 0.30 */
+    memset(ybox, 0, sizeof ybox);
+    memset(ycls, -100, sizeof ycls);
+    yput(7, 5, 5, 3.0f, 3);
+    yput(7, 8, 2, 2.0f, 3);
+    assert(decode_yolo(&b, &c, 1, 320, 240, RM, &p, d, 16) == 2);
     puts("decode_yolo OK");
 }
 

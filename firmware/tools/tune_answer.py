@@ -151,8 +151,9 @@ def iou_matrix(b):
     return np.where(u > 0, inter / np.maximum(u, 1e-12), 0)
 
 
-def nms(cls, ious, thr, agnostic):
-    """giống nms() trong logic.c: duyệt theo score giảm dần, bỏ box có IoU > thr với box đã giữ"""
+def nms(cls, ious, thr, agnostic, cross_iou=1.0):
+    """giống nms() trong logic.c: duyệt theo score giảm dần, bỏ box có IoU > thr với box đã giữ.
+    Khi agnostic=0 và cross_iou < 1.0: chạy thêm tầng 2 cross-class NMS để bỏ 2 nhãn đè khít cùng 1 vật."""
     n = len(cls)
     dead = np.zeros(n, bool)
     keep = []
@@ -165,7 +166,11 @@ def nms(cls, ious, thr, agnostic):
             break
         hit = ious[i] > thr
         dead |= hit if agnostic else (hit & same[i])
-    return np.array(keep, int)
+    keep = np.array(keep, int)
+    if not agnostic and cross_iou < 1.0 and len(keep) > 1:
+        sub = nms(cls[keep], ious[np.ix_(keep, keep)], cross_iou, 1, 1.0)
+        keep = keep[sub]
+    return keep
 
 
 def region(cx):
@@ -253,6 +258,7 @@ def main():
     ap.add_argument("--out", default=str(REPO / "outputs" / "tune_answer.json"))
     ap.add_argument("--eval", default="", help="chỉ CHẤM 1 cấu hình, không dò: 'conf,iou,agn,loc' vd '0.45,0.45,1,0.10'")
     ap.add_argument("--eval-cls", default="", help="ghi đè ngưỡng riêng vài lớp khi --eval, vd 'bottle=0.3,mouse=0.35'")
+    ap.add_argument("--cross-nms", type=float, default=0.60, help="tầng 2 NMS khác lớp khi agn=0 (1.0 = tắt; khớp YOLO_CROSS_NMS_IOU)")
     args = ap.parse_args()
 
     sets = []
@@ -287,7 +293,7 @@ def main():
                 ious = iou_matrix(bx)
                 rg = region((bx[:, 0] + bx[:, 2]) / 2)
                 for c in combos:
-                    i = nms(cl, ious, c[0], c[1])
+                    i = nms(cl, ious, c[0], c[1], args.cross_nms)
                     kept[c][-1].append((cl[i], sc[i], rg[i]))
         gts_all.append(gts)
 
