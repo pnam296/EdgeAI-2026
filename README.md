@@ -88,12 +88,15 @@ các lần train trên Kaggle ở `kaggle_runs/cam*`, `kaggle_runs/gen*`.
 
 | | |
 |---|---|
-| Detector | **cam3R3B** (`kaggle_runs/cam3R3B`): YOLO P2P4 ~160k tham số, INT8, tầm với mức P4 ×1.5 |
-| Ngưỡng conf | bottle **0.35**, cup **0.65**, mouse **0.70**, phone / book / box / toy_car 0.45 |
-| NMS | IoU **0.45, gộp lớp** (2 box khác lớp đè lên 1 vật chỉ giữ box điểm cao hơn) |
-| LOCATION | lớp được hỏi không có box đủ ngưỡng thì lấy box điểm cao nhất ≥ 0.10 (`LOC_FLOOR`) |
+| Detector | **cam3R3A_merge** (`kaggle_runs/cam3R3A_merge`): YOLO P2P4 ~189k tham số, INT8 (calibrate trộn 300 BTC + 150 OV7670), tầm với mức P4 ×1.5 |
+| Ngưỡng conf | bottle **0.35**, cup **0.45**, phone **0.65**, book **0.40**, mouse **0.40**, box **0.575**, toy_car **0.45** |
+| NMS | **2 tầng:** IoU **0.30 theo lớp** (giữ 2 vật khác lớp sát nhau) + **0.60 khác lớp** (`YOLO_CROSS_NMS_IOU`, bỏ 2 nhãn đè khít cùng 1 vật) |
+| LOCATION | lớp được hỏi không có box đủ ngưỡng thì lấy box điểm cao nhất ≥ **0.25** (`LOC_FLOOR`) |
 
-Cấu hình nằm trong `firmware/main/model_config.h`. Web/API đổi tạm khi chạy được: `?conf=` (mọi lớp), `&iou=`,
+- mAP@0.5 float của `cam3R3A_merge` (`gen5` + 1.075 ảnh `cam_real × 3`, khởi tạo từ `cam3C`, KD 1.0): `camval` **0.9135**, `real55` (chưa thấy) **0.8917** *(vs R3B 0.7963, R3A 0.7971)*, `btcmau` (9 ảnh BTC) **0.7129** *(vs R3B 0.6676, R3A 0.6516)*, `btc` **0.9783**, `rf` **0.9179**.
+- Bản INT8 + decode C (`cam_val` 215 ảnh): mAP@0.5 **0.8875**; độ đúng câu trả lời (`tune_answer.py`, `absent_w=0.3`): `cam_val` **0.7700** *(cấu hình R3B cũ: 0.7228)*, `BTC val` **0.8682** *(cũ: 0.8512)*.
+
+Cấu hình nằm trong `firmware/main/model_config.h` (và `YOLO_CROSS_NMS_IOU` trong `firmware/main/logic.h`). Web/API đổi tạm khi chạy được: `?conf=` (mọi lớp), `&iou=`,
 `&agn=`, `&loc=`.
 
 ### Bộ test (không bao giờ dùng để train)

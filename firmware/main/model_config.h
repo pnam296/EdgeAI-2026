@@ -19,23 +19,19 @@
  * Web/API doi tung lan chay: ?conf=0.5 (ghi de nguong MOI lop) &loc=0.1 &iou=0.6 &agn=1.
  *  CLASS_CONF_INIT: nguong tung lop {bottle, cup, phone, book, mouse, box, toy_car} cho COUNT/EXIST/LIST
  *  LOC_FLOOR      : LOCATION hoi lop X ma khong co box X du nguong -> lay box X diem cao nhat >= LOC_FLOOR
- * Gia tri duoi: model cam3R3B (kaggle_runs/cam3R3B: thay cam3 + tro P2P4 khoi tao tu cam3, du lieu gen5, KD 2.0,
- * KHONG co anh camera that; P4 x1.5, INT8). Do dung cau tra loi voi cau hinh duoi (anh chua thay): khan200 0.614,
- * khan875 0.601, khan1075 0.603, 9 anh BTC 0.531, real55 0.434. Model truoc: cam3A (4153b48). */
+ * Gia tri duoi: model cam3R3A_merge (kaggle_runs/cam3R3A_merge: gen5 + cam_real x3, khoi tao tu cam3C, KD 1.0,
+ * P4 x1.5, INT8 calibrate tron 300 anh BTC + 150 anh OV7670 that).
+ * mAP50 float: camval 0.9135, real55 (chua thay) 0.8917, btcmau (9 anh BTC) 0.7129, btc 0.9783, rf 0.9179.
+ * INT8 + decode C (camval): mAP50 0.8875; do dung cau tra loi (tune_answer, absent_w 0.1/0.3):
+ *   cam_val 0.7667 / 0.7700 (cu cam3R3B cfg: 0.7228), BTC val 0.8660 / 0.8682 (cu: 0.8512). */
 #define CONF_THRESH      0.45f
-/* NMS 0.45, GOP LOP (nguoi dung chon: tranh 2 label khac lop de len cung 1 vat).
- * cam3R2B + nguong duoi: khan200 0.621, khan875 0.595, BTC mau 0.519 (gop lop 0.30: 0.617/0.596/0.519;
- * 0.30 theo lop + chi bottle 0.35: 0.619/0.601/0.537). Truoc do: 0.30 theo lop (c6fe430). */
-#define NMS_IOU          0.45f
-#define NMS_AGNOSTIC     1        /* 1: bo box lop khac trung len cung 1 vat; 0: chi NMS trong cung lop */
-/* bottle 0.30: chai nhua TRONG SUOT tren nen sang diem thap (0.45 chi bat 62% chai that, 0.30 ~70%);
- * dung cau tra loi khan1075 0.576 -> 0.580, BTC val 0.886 -> 0.888 (tune_answer --eval-cls bottle=0.3)
- * Thu cam3R2B: bottle 0.35 (nguoi dung chot): khan200 0.619, khan875 0.601, BTC mau 0.537 (0.30: 0.618/0.600/0.552; 0.40 cho khan200 0.618 -> 0.618, khan875 0.600 -> 0.602, BTC mau 0.552 -> 0.530) */
-/* cup 0.65, mouse 0.70 (nguoi dung chon): bot bao nham coc/chuot */
-#define CLASS_CONF_INIT  {0.35f, 0.65f, CONF_THRESH, CONF_THRESH, 0.70f, CONF_THRESH, CONF_THRESH}
-#define LOC_FLOOR        0.100f   /* chung ket co DU do tren ban -> cau vi tri hau het hoi vat CO that: du phong co loi.
-                                    tune_answer (10% hoi vat vang mat): khan200 LOC 0.789 (vat co 0.790, vang 0.783),
-                                    BTC val 0.971. 0.08 hay "bia" vi tri khi vat vang mat; neu de hoi nhieu vat vang -> 0.25 */
+/* NMS 2 tang: tang 1 cung lop IoU 0.30 (khong xoa nham 2 vat khac lop dat sat nhau, vd chai dung truoc hop)
+ * + tang 2 khac lop YOLO_CROSS_NMS_IOU 0.60 trong logic.h (xoa box khac lop de khit >60% len cung 1 vat). */
+#define NMS_IOU          0.30f
+#define NMS_AGNOSTIC     0        /* 0: per-class NMS 0.30 + tang 2 cross-class 0.60; 1: 1 tang gop lop */
+/* Nguong tung lop {bottle, cup, phone, book, mouse, box, toy_car} toi uu bang tune_answer.py tren INT8: */
+#define CLASS_CONF_INIT  {0.350f, 0.450f, 0.650f, 0.400f, 0.400f, 0.575f, 0.450f}
+#define LOC_FLOOR        0.250f   /* cam_val LOC 0.8988 (absent_w 0.1) / 0.8880 (absent_w 0.3); bot bia vi tri vat vang */
 
 /* YOLO: so bin DFL moi canh (reg_max trong file .yaml trong yolo_cfg/). Grid baseline khong dung. */
 #define YOLO_REG_MAX     4
