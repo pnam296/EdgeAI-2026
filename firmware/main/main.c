@@ -364,7 +364,7 @@ static esp_err_t infer_and_reply(httpd_req_t *req, char *q, const det_params_t *
     char answer[384] = "";
     if (n >= 0 && strspn(q, " ") < strlen(q)) {
         intent = infer_intent(q);
-        if (intent >= 0) make_answer(intent, q, d, n, ap, answer, sizeof answer);
+        if (intent >= 0) intent = make_answer(intent, q, d, n, ap, answer, sizeof answer);
     }
     int64_t t2 = esp_timer_get_time();
     cam_pause_stream(false);

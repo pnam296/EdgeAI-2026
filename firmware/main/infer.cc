@@ -198,5 +198,8 @@ int infer_intent(const char *norm_q)
     TfLiteTensor *o = s_txt->output(0);
     int best = 0;
     for (int k = 1; k < NUM_INTENTS; k++) if (deq(o, k) > deq(o, best)) best = k;
+    int cls[NUM_CLASSES];
+    if ((best == INTENT_COUNT || best == INTENT_EXIST || best == INTENT_LOCATION) && !logic_find_classes(norm_q, cls))
+        best = INTENT_OUT_OF_SCOPE;
     return best;
 }

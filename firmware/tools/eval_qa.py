@@ -120,6 +120,8 @@ def main():
         pred = INTENTS[int(np.argmax(it.get_tensor(out["index"])[0]))]
         want_cls = [c for c in r["classes"].split(";") if c]
         got_cls = find_c(norm)
+        if pred in ("COUNT", "EXIST", "LOCATION") and not got_cls:
+            pred = "OUT_OF_SCOPE"
         gi = r["intent"]
         ok_int = pred == gi
         needs_cls = gi in ("COUNT", "EXIST", "LOCATION")

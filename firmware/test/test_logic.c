@@ -104,7 +104,12 @@ int main(void)
     char a[256];
     char q1[] = "co bao nhieu coc"; make_answer(0, q1, d, n, NULL, a, sizeof a); puts(a); assert(strstr(a, "2"));
     char q2[] = "co dien thoai khong"; make_answer(1, q2, d, n, NULL, a, sizeof a); puts(a); assert(strstr(a, "Không"));
-    char q3[] = "sach nam o dau"; make_answer(3, q3, d, n, NULL, a, sizeof a); puts(a); assert(strstr(a, "giữa") && !strncmp(a, "Sách", 5));
+    char q3[] = "sach nam o dau"; make_answer(3, q3, d, n, NULL, a, sizeof a); puts(a); assert(!strcmp(a, "Sách nằm ở giữa."));
+    char q3b[] = "coc nam o dau"; make_answer(3, q3b, d, n, NULL, a, sizeof a); puts(a);
+    assert((!strcmp(a, "Cốc nằm bên trái.") || !strcmp(a, "Cốc nằm bên phải.")) && !strchr(a, ','));
+    char q_oos[] = "co con meo khong";
+    assert(make_answer(1, q_oos, d, n, NULL, a, sizeof a) == INTENT_OUT_OF_SCOPE &&
+           !strcmp(a, "Câu hỏi nằm ngoài phạm vi."));
     make_answer(2, q1, d, n, NULL, a, sizeof a); puts(a); assert(!strcmp(a, "Có 2 loại đối tượng: 2 cốc, 1 sách."));
     make_answer(4, q1, d, n, NULL, a, sizeof a); puts(a);
     char q4[] = "hop co khong phu"; make_answer(1, q4, d, 0, NULL, a, sizeof a); puts(a);

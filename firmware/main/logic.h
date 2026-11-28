@@ -11,6 +11,8 @@ extern "C" {
 #define NUM_INTENTS 5   /* sorted(df.intent.unique()) */
 #define MAX_SEQ     64  /* do dai cau toi da; do dai that lay tu input cua model TextCNN */
 
+enum { INTENT_COUNT, INTENT_EXIST, INTENT_LIST, INTENT_LOCATION, INTENT_OUT_OF_SCOPE };
+
 extern const char *const CLASS_NAMES[NUM_CLASSES];
 extern const char *const INTENT_NAMES[NUM_INTENTS];
 
@@ -73,12 +75,13 @@ float answer_floor(const answer_params_t *ap);
 int filter_by_class_conf(const det_t *d, int n, const answer_params_t *ap, det_t *out);
 
 /* Cau tra loi tieng Viet theo intent + ket qua detection.
- * d: box sau NMS o nguong san (sort score giam dan); ap: nguong lop + du phong LOCATION (NULL = dung d nguyen). */
+ * d: box sau NMS o nguong san (sort score giam dan); ap: nguong lop + du phong LOCATION (NULL = dung d nguyen).
+ * Tra ve intent thuc te (COUNT/EXIST/LOCATION khong bat duoc ten vat -> INTENT_OUT_OF_SCOPE). */
 /* cac lop duoc nhac toi trong cau da normalize (theo thu tu xuat hien), tra ve so lop - cho cong cu may tinh */
 int logic_find_classes(const char *norm, int *cls);
 
-void make_answer(int intent, const char *norm_q, const det_t *d, int n, const answer_params_t *ap, char *out,
-                 size_t sz);
+int make_answer(int intent, const char *norm_q, const det_t *d, int n, const answer_params_t *ap, char *out,
+                size_t sz);
 
 #ifdef __cplusplus
 }

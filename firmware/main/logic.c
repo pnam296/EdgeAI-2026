@@ -249,15 +249,8 @@ static int find_classes(const char *norm, int *cls)
 
 static const char *where(const det_t *b)
 {
-    float cx = (b->x1 + b->x2) / 2, cy = (b->y1 + b->y2) / 2;
-    static const char *const T[3][3] = {
-        {"phía trên bên trái", "phía trên ở giữa", "phía trên bên phải"},
-        {"bên trái", "ở giữa", "bên phải"},
-        {"phía dưới bên trái", "phía dưới ở giữa", "phía dưới bên phải"},
-    };
-    int col = cx < 1.f / 3 ? 0 : cx < 2.f / 3 ? 1 : 2;
-    int row = cy < 1.f / 3 ? 0 : cy < 2.f / 3 ? 1 : 2;
-    return T[row][col];
+    float cx = (b->x1 + b->x2) / 2;
+    return cx < 1.f / 3 ? "bên trái" : cx < 2.f / 3 ? "ở giữa" : "bên phải";
 }
 
 #define APPEND(...) do { if (p < sz) p += snprintf(out + p, sz - p, __VA_ARGS__); } while (0)
@@ -280,8 +273,8 @@ int filter_by_class_conf(const det_t *d, int n, const answer_params_t *ap, det_t
 
 #define MAX_ANS_DETS 128
 
-void make_answer(int intent, const char *norm_q, const det_t *d_all, int n_all, const answer_params_t *ap,
-                 char *out, size_t sz)
+int make_answer(int intent, const char *norm_q, const det_t *d_all, int n_all, const answer_params_t *ap,
+                char *out, size_t sz)
 {
     static det_t f[MAX_ANS_DETS];   /* static: khong ton stack task httpd */
     if (n_all > MAX_ANS_DETS) n_all = MAX_ANS_DETS;
@@ -289,50 +282,48 @@ void make_answer(int intent, const char *norm_q, const det_t *d_all, int n_all, 
     const det_t *d = f;
     size_t p = 0;
     out[0] = 0;
-    const char *name = INTENT_NAMES[intent];
-    if (!strcmp(name, "OUT_OF_SCOPE")) {
+    if (intent < 0 || intent >= NUM_INTENTS || intent == INTENT_OUT_OF_SCOPE) {
         APPEND("Câu hỏi nằm ngoài phạm vi.");
-        return;
+        return INTENT_OUT_OF_SCOPE;
     }
-    if (!strcmp(name, "LIST")) {
+    if (intent == INTENT_LIST) {
         int cnt[NUM_CLASSES] = {0}, k = 0;
         for (int i = 0; i < n; i++) k += !cnt[d[i].cls]++;
-        if (!k) { APPEND("Không có đối tượng nào trong ảnh."); return; }
+        if (!k) { APPEND("Không có đối tượng nào trong ảnh."); return intent; }
         APPEND("Có %d loại đối tượng", k);
         const char *sep = ":";
         for (int c = 0; c < NUM_CLASSES; c++)
             if (cnt[c]) { APPEND("%s %d %s", sep, cnt[c], VN[c]); sep = ","; }
         APPEND(".");
-        return;
+        return intent;
     }
     int cls[NUM_CLASSES];
     int m = find_classes(norm_q, cls);
     if (!m) {
-        APPEND("Không xác định được đối tượng trong câu hỏi.");
-        return;
+        APPEND("Câu hỏi nằm ngoài phạm vi.");
+        return INTENT_OUT_OF_SCOPE;
     }
+    if (intent == INTENT_LOCATION) m = 1;
     for (int i = 0; i < m; i++) {
         int c = cls[i], cnt = 0, best = -1;
         for (int j = 0; j < n; j++)
             if (d[j].cls == c) { cnt++; if (best < 0) best = j; }   /* d da sort theo score */
         if (i) APPEND(" ");
-        if (!strcmp(name, "COUNT")) {
+        if (intent == INTENT_COUNT) {
             APPEND("Có %d %s.", cnt, VN[c]);
-        } else if (!strcmp(name, "EXIST")) {
+        } else if (intent == INTENT_EXIST) {
             APPEND(cnt ? "Có %s trong ảnh." : "Không có %s trong ảnh.", VN[c]);
-        } else if (best < 0) {   /* LOCATION: khong co box du nguong lop -> du phong o nguong loc_floor */
-            int fb = -1;
-            for (int j = 0; ap && j < n_all && fb < 0; j++)   /* d_all da sort theo score */
-                if (d_all[j].cls == c && d_all[j].score >= ap->loc_floor) fb = j;
-            if (fb >= 0) APPEND("%s nằm %s.", VN_CAP[c], where(&d_all[fb]));
+        } else {   /* LOCATION: chi 1 vat diem cao nhat (khong du nguong lop thi du phong loc_floor) */
+            const det_t *b = best >= 0 ? &d[best] : NULL;
+            if (!b && ap) {
+                for (int j = 0; j < n_all; j++)   /* d_all da sort theo score */
+                    if (d_all[j].cls == c && d_all[j].score >= ap->loc_floor) { b = &d_all[j]; break; }
+            }
+            if (b) APPEND("%s nằm %s.", VN_CAP[c], where(b));
             else APPEND("Không thấy %s trong ảnh.", VN[c]);
-        } else {
-            APPEND("%s nằm %s", VN_CAP[c], where(&d[best]));
-            for (int j = best + 1, extra = 0; j < n && extra < 2; j++)   /* them toi da 2 vat cung lop */
-                if (d[j].cls == c) { APPEND(", %s", where(&d[j])); extra++; }
-            APPEND(".");
         }
     }
+    return intent;
 }
 
 /* cho cong cu tren may tinh (tools/eval_qa.py) goi dung ham tim ten vat cua firmware */

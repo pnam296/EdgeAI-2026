@@ -80,6 +80,7 @@ def build_logic():
     lib.decode_yolo.argtypes = [C.POINTER(QT), C.POINTER(QT), C.c_int, C.c_int, C.c_int, C.c_int,
                                 C.POINTER(DP), C.POINTER(DET), C.c_int]
     lib.make_answer.argtypes = [C.c_int, C.c_char_p, C.POINTER(DET), C.c_int, C.POINTER(AP), C.c_char_p, C.c_size_t]
+    lib.make_answer.restype = C.c_int
     lib.filter_by_class_conf.argtypes = [C.POINTER(DET), C.c_int, C.POINTER(AP), C.POINTER(DET)]
     lib.tokenize.argtypes = [C.c_char_p, C.c_void_p, C.c_int, C.POINTER(C.c_int32), C.c_int]
     return lib
@@ -157,7 +158,7 @@ class Engine:
             if norm.strip():
                 intent = self.intent(norm)
                 ab = C.create_string_buffer(384)
-                self.lib.make_answer(intent, norm, dets, n, C.byref(ap), ab, 384)
+                intent = self.lib.make_answer(intent, norm, dets, n, C.byref(ap), ab, 384)
                 answer = ab.value
             n = self.lib.filter_by_class_conf(dets, n, C.byref(ap), dets)   # web chỉ vẽ box đủ ngưỡng lớp
             t2 = time.perf_counter()
