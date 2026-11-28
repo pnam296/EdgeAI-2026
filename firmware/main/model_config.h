@@ -19,19 +19,23 @@
  * Web/API doi tung lan chay: ?conf=0.5 (ghi de nguong MOI lop) &loc=0.1 &iou=0.6 &agn=1.
  *  CLASS_CONF_INIT: nguong tung lop {bottle, cup, phone, book, mouse, box, toy_car} cho COUNT/EXIST/LIST
  *  LOC_FLOOR      : LOCATION hoi lop X ma khong co box X du nguong -> lay box X diem cao nhat >= LOC_FLOOR
- * Gia tri duoi: model cam3R3A_merge (kaggle_runs/cam3R3A_merge: gen5 + cam_real x3, khoi tao tu cam3C, KD 1.0,
- * P4 x1.5, INT8 calibrate tron 300 anh BTC + 150 anh OV7670 that).
- * mAP50 float: camval 0.9135, real55 (chua thay) 0.8917, btcmau (9 anh BTC) 0.7129, btc 0.9783, rf 0.9179.
- * INT8 + decode C (camval): mAP50 0.8875; do dung cau tra loi (tune_answer, absent_w 0.1/0.3):
- *   cam_val 0.7667 / 0.7700 (cu cam3R3B cfg: 0.7228), BTC val 0.8660 / 0.8682 (cu: 0.8512). */
+ * MODEL THI DAU CHUNG KET: cam4B (init R3B, thay R3B 25ep + tro 45ep KD 2.0, cam_real1_giu_anh x6; INT8 outputs/cam4B).
+ * Luu y: da train tren bo khan -> diem khan200/khan1075 khong dung de so. Anh chua thay (NMS 2 tang, nguong duoi,
+ * LOC 0.10): xem README. Muon quay lai cam3R3B: git checkout b0ff117 -- firmware/main/models/ + nguong R3B
+ * {0.35, 0.65, 0.45, 0.45, 0.70, 0.45, 0.45}. */
 #define CONF_THRESH      0.45f
-/* NMS 2 tang: tang 1 cung lop IoU 0.30 (khong xoa nham 2 vat khac lop dat sat nhau, vd chai dung truoc hop)
- * + tang 2 khac lop YOLO_CROSS_NMS_IOU 0.60 trong logic.h (xoa box khac lop de khit >60% len cung 1 vat). */
+/* NMS 2 tang (nguoi dung chon: khong de 2 lop tren 1 vat): tang 1 cung lop IoU 0.30
+ * + tang 2 khac lop YOLO_CROSS_NMS_IOU 0.60 trong logic.h (xoa box khac lop de khit >60% len cung 1 vat).
+ * cam3R3B, nguong duoi: khan200 / khan1075 / BTC mau / real55 = 0.614 / 0.605 / 0.533 / 0.434
+ * (gop lop 0.45: 0.614 / 0.603 / 0.532 / 0.434; theo lop 0.45 khong tang 2: 0.627 / 0.615 / 0.528 / 0.475). */
 #define NMS_IOU          0.30f
 #define NMS_AGNOSTIC     0        /* 0: per-class NMS 0.30 + tang 2 cross-class 0.60; 1: 1 tang gop lop */
-/* Nguong tung lop {bottle, cup, phone, book, mouse, box, toy_car} toi uu bang tune_answer.py tren INT8: */
-#define CLASS_CONF_INIT  {0.350f, 0.450f, 0.650f, 0.400f, 0.400f, 0.575f, 0.450f}
-#define LOC_FLOOR        0.250f   /* cam_val LOC 0.8988 (absent_w 0.1) / 0.8880 (absent_w 0.3); bot bia vi tri vat vang */
+/* nguong cua cam3R3B (nguoi dung chon dung cho ca cam3R3A_merge): bottle 0.35, cup 0.65, mouse 0.70.
+ * cam3R3A_merge + nguong nay: BTC mau 0.512, real55 0.449, khan200 0.725
+ * (nguong rieng cua ban do: {0.35,0.45,0.65,0.40,0.40,0.575,0.45} -> 0.531 / 0.422 / 0.731) */
+#define CLASS_CONF_INIT  {0.60f, 0.50f, 0.70f, 0.45f, 0.70f, 0.65f, 0.65f}  /* nguoi dung chinh khi test cam4B: bottle 0.60, cup 0.50, phone 0.70, book 0.45, mouse 0.70, box 0.65, toy_car 0.65 */
+#define LOC_FLOOR        0.100f   /* chung ket co DU do tren ban -> cau vi tri hau het hoi vat CO that.
+                                    Neu de hoi nhieu vat vang mat -> 0.25 */
 
 /* YOLO: so bin DFL moi canh (reg_max trong file .yaml trong yolo_cfg/). Grid baseline khong dung. */
 #define YOLO_REG_MAX     4

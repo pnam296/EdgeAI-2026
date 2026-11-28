@@ -32,7 +32,7 @@ TESTS = {"BTC mẫu": ["data/btc_samples"],
          "khăn200": ["data/cam_new_test"],         # 200 ảnh nền khăn trắng, người đã sửa nhãn (giống chung kết)
          "khăn875": ["data/cam_new_train"],        # 875 ảnh khăn trắng còn lại, người đã sửa nhãn
          "khăn1075": ["outputs/khan1075"]}          # 200 + 875 gộp (đều đã sửa nhãn)
-CFG = "0.45,0.45,1,0.10"        # = firmware: conf 0.45, NMS 0.45 gộp lớp, LOC_FLOOR 0.10
+CFG = "0.45,0.30,0,0.10"        # = firmware: conf 0.45, NMS 2 tầng (0.30 theo lớp + 0.60 khác lớp, mặc định --cross-nms), LOC_FLOOR 0.10
 CFG_CLS = "bottle=0.35,cup=0.65,mouse=0.7"  # = firmware: ngưỡng riêng từng lớp
 for _s in (sys.stdout, sys.stderr):
     try:

@@ -122,6 +122,8 @@ def main():
         got_cls = find_c(norm)
         if pred in ("COUNT", "EXIST", "LOCATION") and not got_cls:
             pred = "OUT_OF_SCOPE"
+        elif pred == "LOCATION":
+            got_cls = got_cls[:1]
         gi = r["intent"]
         ok_int = pred == gi
         needs_cls = gi in ("COUNT", "EXIST", "LOCATION")

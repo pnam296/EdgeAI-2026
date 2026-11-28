@@ -17,7 +17,7 @@ static const char *const KW[NUM_CLASSES][MAX_KW] = {
     {"coc", "ly", "tach", "mug"},
     {"dien thoai", "di dong", "smartphone", "thoai", "dtdd", "dt", "iphone", "samsung", "oppo", "xiaomi", "nokia"},
     {"sach", "quyen", "cuon", "vo", "so tay", "tap", "truyen", "giao trinh"},
-    {"chuot"},
+    {"chuot", "mouse", "logitech"},
     {"thung giay", "thung carton", "khan giay", "hop", "thung", "carton"},
     {"o to do choi", "oto do choi", "xe do choi", "hot wheels", "oto", "o to", "xe"},
 };
@@ -25,7 +25,14 @@ static const char *const KW[NUM_CLASSES][MAX_KW] = {
 /* tu thuong gap gan giong tu khoa (minh~binh, chao~chai...) -> khong bao gio khop gan dung */
 static int is_stop(const char *w, size_t lw)
 {
-    static const char *const S[] = {"minh", "chao", "chan", "nhieu", "thoi", "hinh", "trong", "khong", "nhung", "thay"};
+    static const char *const S[] = {"minh", "chao", "chan", "nhieu", "thoi", "hinh", "trong", "khong", "nhung", "thay",
+        /* tu thong dung gan giong tu khoa (quet data/intent*.csv): phai~chai, khung/chung~thung, tinh~binh... */
+        "phai", "choi", "chia", "chau", "chay", "chat", "khai", "thai",                   /* ~chai */
+        "tinh", "dinh", "sinh", "kinh", "linh", "vinh", "xinh", "ninh", "banh", "benh",   /* ~binh */
+        "khung", "chung", "trung", "thuong", "tung", "thong", "dung", "hung",             /* ~thung */
+        "cach", "gach", "bach", "xach",                                                   /* ~tach/sach */
+        "cuoi", "luon", "muon", "buon", "cuoc",                                           /* ~cuon */
+        "chuoi", "chut"};                                                                 /* ~chuot */
     for (size_t i = 0; i < sizeof S / sizeof *S; i++)
         if (strlen(S[i]) == lw && !strncmp(S[i], w, lw)) return 1;
     return 0;
@@ -202,11 +209,26 @@ void tokenize(const char *norm, const char *const *vocab, int nv, int32_t *ids, 
 }
 
 /* vi tri xuat hien dau tien cua cum tu w (dung ranh gioi tu), -1 neu khong co */
+/* "xe" + tu sau la xe that (xe dap, xe may...) -> khong phai xe do choi (-> OUT_OF_SCOPE) */
+static int xe_that(const char *next)
+{
+    static const char *const X[] = {"dap", "may", "buyt", "bus", "tai", "khach", "lua", "lan", "cuu", "cau",
+                                    "rac", "ui", "ben", "bo", "tang", "cong", "om", "ba", "lu", "nang", "tho"};
+    if (*next == ' ') next++;
+    size_t l = strcspn(next, " ");
+    for (size_t i = 0; i < sizeof X / sizeof *X; i++)
+        if (strlen(X[i]) == l && !strncmp(X[i], next, l)) return 1;
+    return 0;
+}
+
 static int find_word(const char *norm, const char *w)
 {
     size_t len = strlen(w);
     for (const char *p = norm; (p = strstr(p, w)); p++)
-        if ((p == norm || p[-1] == ' ') && (p[len] == ' ' || p[len] == 0)) return (int)(p - norm);
+        if ((p == norm || p[-1] == ' ') && (p[len] == ' ' || p[len] == 0)) {
+            if (!strcmp(w, "xe") && p[len] && xe_that(p + len)) continue;
+            return (int)(p - norm);
+        }
     return -1;
 }
 
@@ -222,7 +244,10 @@ static int find_classes(const char *norm, int *cls)
         }
         if (best >= 0) { cls[n] = c; pos[n] = best; n++; }
     }
-    if (!n) {   /* khong khop chinh xac: thu khop gan dung tung tu trong cau (gõ sai 1 ky tu) */
+#ifndef FUZZY_KW
+#define FUZZY_KW 0   /* nguoi dung: cau hoi chung ket khong go sai -> TAT khop gan dung (tranh phai~chai, khung~thung) */
+#endif
+    if (FUZZY_KW && !n) {   /* khong khop chinh xac: thu khop gan dung tung tu trong cau (gõ sai 1 ky tu) */
         for (int c = 0; c < NUM_CLASSES; c++) {
             int best = -1;
             for (int k = 0; k < MAX_KW && KW[c][k] && best < 0; k++) {

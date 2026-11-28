@@ -1,0 +1,14 @@
+{
+  "id": "dohuuminhtri/edgeai-cam4c",
+  "title": "edgeai cam4c",
+  "code_file": "train_cam4.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "enable_internet": true,
+  "competition_sources": ["egde-ai-challenge-2026-lan-2-qualifiers"],
+  "dataset_sources": ["dohuuminhtri/edgeai-cam3-all", "dohuuminhtri/edgeai-tools3", "dohuuminhtri/edgeai-cam-real2"],
+  "kernel_sources": ["dohuuminhtri/edgeai-gen5"]
+}

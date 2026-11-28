@@ -79,10 +79,26 @@ OOS_GENERAL = ["hom nay an gi", "ten ban la gi", "ban dang lam gi", "day la gi",
                "ly do la gi", "co the giup toi khong", "co bao nhieu nguoi trong anh", "nguoi trong anh la ai"]
 COUNT_T = ["co bao nhieu {o}", "co may {o}", "bao nhieu {o}", "dem so {o}", "so luong {o} la bao nhieu",
            "co tat ca may {o}", "tong cong co bao nhieu {o}", "trong anh co may {o}", "tren ban co bao nhieu {o}",
-           "dem giup minh so {o}", "cho biet so {o}", "{o} co bao nhieu", "{o} co may cai", "may {o} vay"]
+           "dem giup minh so {o}", "cho biet so {o}", "{o} co bao nhieu", "{o} co may cai", "may {o} vay",
+           # 28/11: cach hoi dem khong co "bao nhieu/may" (con so, tong so, chinh xac...)
+           "cho biet con so cua {o}", "con so chinh xac cua {o}", "con so {o} trong anh", "tong so {o}",
+           "tong so {o} la bao nhieu", "so {o} la bao nhieu", "cho biet chinh xac so {o}", "so luong chinh xac cua {o}",
+           "cho biet so luong cua nhung {o} trong anh", "dem chinh xac so {o}", "con so cua nhung {o} tren ban"]
 EXIST_T = ["co {o} khong", "co {o} nao khong", "trong anh co {o} khong", "tren ban co {o} khong",
            "co thay {o} khong", "co {o} hay khong", "lieu co {o} khong", "xem co {o} khong", "{o} co trong anh khong",
-           "anh co chua {o} khong", "ban co nhin thay {o} khong", "co ton tai {o} khong"]
+           "anh co chua {o} khong", "ban co nhin thay {o} khong", "co ton tai {o} khong",
+           # 28/11: "co mat" / "o day" (truoc chi gap o COUNT/OOS)
+           "co mat {o} nao o day khong", "co mat {o} khong", "{o} co mat trong anh khong", "o day co {o} khong",
+           "{o} co o day khong", "co {o} nao o day khong", "o day co {o} nao khong", "co su co mat cua {o} khong",
+           "tren ban co mat {o} nao khong", "o day co thay {o} khong",
+           # 28/11: "o dau do" = o bat ky dau -> EXIST (BTC intent_test co ~29 cau, truoc bi doan LOCATION)
+           "co thay {o} o dau do trong anh khong", "co thay {o} o dau do khong", "{o} co o dau do trong anh khong",
+           "co {o} o dau do trong hinh khong", "o dau do co {o} khong", "ban co thay {o} o dau do khong",
+           "co thay {o} o cho nao do khong", "co {o} nam o dau do khong",
+           # "hay xac nhan ... co X hay khong" (v4 lam hong 5 cau BTC test)
+           "hay xac nhan trong anh co {o} hay khong", "hay xac nhan trong hinh co {o} hay khong",
+           "xac nhan trong canh co {o} hay khong", "xac nhan giup co {o} khong", "hay xac nhan co {o} khong",
+           "hay xac nhan trong khung hinh co {o} hay khong"]
 LOC_T = ["{o} o dau", "{o} nam o dau", "{o} o ben nao", "{o} nam phia nao", "vi tri cua {o}", "{o} o cho nao",
          "{o} dat o dau", "{o} nam ben trai hay ben phai", "{o} o giua hay o canh", "tim vi tri {o}",
          "xac dinh vi tri {o}", "{o} nam trai giua hay phai", "{o} nam ben trai phai khong", "{o} o giua dung khong",
@@ -100,7 +116,11 @@ LIST_CORES = [
     "co may loai do vat", "trong anh co bao nhieu loai vat khac nhau", "anh nay gom nhung mon do nao",
     "mo ta cac vat tren ban", "cho minh danh sach do vat", "liet ke va dem tung loai", "cac vat the trong anh la gi",
     "trong buc anh co nhung doi tuong nao", "co nhung do dung gi", "tong hop cac loai do vat", "dem tung loai do vat",
-    "tren ban co nhung mon gi", "trong khung hinh co nhung gi", "co do gi tren ban", "nhin thay nhung do vat nao"]
+    "tren ban co nhung mon gi", "trong khung hinh co nhung gi", "co do gi tren ban", "nhin thay nhung do vat nao",
+    # 28/11: "ke ten" / "tat ca do vat" (tu "ten" truoc gan voi OOS "ten ban la gi")
+    "ke ten tat ca do vat", "ke ten tat ca", "ke ten moi thu", "ke ten tat ca do vat tren ban", "cho biet ten cac do vat",
+    "neu ten tat ca vat the", "ten cac do vat trong anh", "ke ten do vat o day", "ke ten tat ca vat the trong hinh",
+    "noi ten cac mon do", "tat ca do vat la gi", "liet ke tat ca do vat", "o day co nhung gi", "ke ten cac thu o day"]
 PREFIX = ["", "", "", "cho hoi ", "xin hoi ", "ban oi ", "cho minh hoi ", "hay cho biet ", "giup minh "]
 SUFFIX = ["", "", "", " vay", " the", " nhi", " a", " nhe", " ban"]
 
